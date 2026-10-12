@@ -76,7 +76,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -167,16 +170,130 @@ internal fun ProjectUsageRow(project: ProjectUsage, ratio: Float) {
     }
 }
 
-internal fun LazyListScope.sessionItems(sessions: List<SessionUsage>, period: DashboardPeriod, searching: Boolean = false) {
-    if (sessions.isEmpty()) item { MutedCopy(usageListEmptyMessage(true, period, searching), modifier = Modifier.padding(vertical = 12.dp)) }
+/**
+ * [evidence] holds other periods' sessions, which can prove a Cursor conversation is a Grok Bot run. Search runs
+ * after grouping, so a match keeps its whole group and its totals, and a group's own label can be searched.
+ */
+internal fun LazyListScope.sessionItems(
+    sessions: List<SessionUsage>,
+    period: DashboardPeriod,
+    searching: Boolean = false,
+    evidence: List<SessionUsage> = emptyList(),
+    matches: (SessionUsage) -> Boolean = { true },
+    query: String = "",
+) {
+    val ranked = searchSessionRows(groupSessions(sessions, evidence), searching, matches, query)
+        .sortedByDescending { it.totalTokens }
+    if (ranked.isEmpty()) item { MutedCopy(usageListEmptyMessage(true, period, searching), modifier = Modifier.padding(vertical = 12.dp)) }
     else {
-        val maximum = sessions.maxOfOrNull { it.totalTokens }?.coerceAtLeast(1L) ?: 1L
-        val ranked = sessions.sortedByDescending { it.totalTokens }
-        val keys = uniqueKeys(ranked) { "${it.client}:${it.id}" }
-        itemsIndexed(ranked, key = { index, _ -> keys[index] }) { _, session ->
-            val labels = sessionRowLabels(session, LocalSessionTitles.current)
-            SessionUsageRow(session, labels.title, labels.meta, session.totalTokens.toFloat() / maximum)
+        val maximum = ranked.maxOf { it.totalTokens }.coerceAtLeast(1L)
+        val keys = uniqueKeys(ranked) { it.key }
+        itemsIndexed(ranked, key = { index, _ -> keys[index] }) { _, row ->
+            val ratio = row.totalTokens.toFloat() / maximum
+            if (row.grouped) SessionGroupUsageRow(row, ratio)
+            else sessionRowPresentation(row, LocalSessionTitles.current).let { SessionUsageRow(row.display, it.title, it.meta, ratio) }
         }
+    }
+}
+
+/** A conversation with its subagents and continuations, or a Codex Auto Review or Grok Bot summary. */
+@Composable
+internal fun SessionGroupUsageRow(row: SessionRow, ratio: Float) {
+    var expanded by rememberSaveable(row.key) { mutableStateOf(false) }
+    val motionEnabled = LocalInteractionMotion.current
+    val now = LocalNow.current
+    // The desktop Sessions list shows activity on conversation groups, not on summary rows.
+    val activity = if (row.kind == SessionGroupKind.Conversation) sessionRowActivity(row, now) else SessionActivityState.Idle
+    val labels = sessionRowPresentation(row, LocalSessionTitles.current)
+    val client = row.display.client
+    Column(
+        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            UpstreamToolMark(client, accentFor(client), size = 12.dp)
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(labels.title, color = Ink, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                SessionActivityLine(activity, labels.meta)
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(formatTokens(row.totalTokens), color = Ink, style = MaterialTheme.typography.bodySmall)
+                Text(formatUsageCost(row.costUsd, row.unpricedTokens), color = Muted, style = MaterialTheme.typography.labelSmall)
+            }
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                contentDescription = if (expanded) "Collapse grouped sessions" else "Expand grouped sessions",
+                tint = Muted,
+                modifier = Modifier.size(16.dp).rotate(rememberChevronRotation(expanded)),
+            )
+        }
+        UsageBar(ratio, accentFor(client))
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn(tween(if (motionEnabled) 160 else 0)) + expandVertically(tween(if (motionEnabled) 240 else 0, easing = DesktopEaseOut)),
+            exit = fadeOut(tween(if (motionEnabled) 100 else 0)) + shrinkVertically(tween(if (motionEnabled) 180 else 0, easing = DesktopEaseOut)),
+        ) {
+            Column(modifier = Modifier.padding(start = 20.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                row.members.forEach { member -> SessionMemberLine(member, row.kind, now) }
+            }
+        }
+        HorizontalDivider(color = Line)
+    }
+}
+
+@Composable
+private fun SessionMemberLine(member: SessionMember, kind: SessionGroupKind?, now: Long) {
+    val session = member.session
+    val labels = sessionRowLabels(session, LocalSessionTitles.current)
+    val role = if (kind == SessionGroupKind.Conversation) (if (member.main) "Main session" else "Subagent") else ""
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        UpstreamToolMark(session.client, accentFor(session.client), size = 8.dp)
+        Spacer(Modifier.width(7.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(labels.title, color = Ink, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            SessionActivityLine(sessionActivityState(session, now), listOf(role, labels.meta).filter { it.isNotBlank() }.joinToString(" · "))
+        }
+        Spacer(Modifier.width(8.dp))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(formatTokens(session.totalTokens), color = Ink, style = MaterialTheme.typography.bodySmall)
+            Text(formatUsageCost(session.costUsd, session.unpricedTokens), color = Muted, style = MaterialTheme.typography.labelSmall)
+        }
+        // Lines the figures up with the group's, which leave room for the chevron.
+        Spacer(Modifier.width(20.dp))
+    }
+}
+
+/** Running keeps the green dot; waiting for a reply gets an orange one and says so. */
+@Composable
+private fun SessionActivityLine(activity: SessionActivityState, meta: String) {
+    val label = sessionActivityLabel(activity)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (label.isNotBlank()) {
+            StatusDot(
+                when (activity) {
+                    SessionActivityState.Running -> Success
+                    SessionActivityState.Waiting -> Orange
+                    else -> Muted
+                },
+                size = 6.dp,
+            )
+            Spacer(Modifier.width(5.dp))
+        }
+        val waiting = OrangeText
+        Text(
+            buildAnnotatedString {
+                if (activity == SessionActivityState.Waiting) withStyle(SpanStyle(color = waiting)) { append(label) } else append(label)
+                if (label.isNotBlank() && meta.isNotBlank()) append(" · ")
+                append(meta)
+            },
+            color = Muted,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -186,12 +303,6 @@ internal fun SessionUsageRow(session: SessionUsage, title: String, meta: String,
     val motionEnabled = LocalInteractionMotion.current
     val now = LocalNow.current
     val activity = sessionActivityState(session, now)
-    val activityLabel = when (activity) {
-        SessionActivityState.Running -> "Running"
-        SessionActivityState.Finished -> "Finished"
-        SessionActivityState.Idle -> ""
-    }
-    val activityColor = if (activity == SessionActivityState.Running) Success else Muted
     val context = sessionContextForRow(session, now)
     Column(
         modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(vertical = 4.dp),
@@ -202,19 +313,7 @@ internal fun SessionUsageRow(session: SessionUsage, title: String, meta: String,
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, color = Ink, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (activityLabel.isNotBlank()) {
-                        StatusDot(activityColor, size = 6.dp)
-                        Spacer(Modifier.width(5.dp))
-                    }
-                    Text(
-                        listOf(activityLabel, meta).filter { it.isNotBlank() }.joinToString(" · "),
-                        color = Muted,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                SessionActivityLine(activity, meta)
             }
             Spacer(Modifier.width(10.dp))
             Column(horizontalAlignment = Alignment.End) {
