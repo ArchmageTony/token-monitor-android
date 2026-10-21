@@ -48,21 +48,22 @@ class SwipeWidgetProvider : AppWidgetProvider() {
         internal const val ACTION_NEXT = "widget.DECK_NEXT"
         private val PAGE_ACTIONS = setOf(ACTION_PREVIOUS, ACTION_NEXT)
 
-        internal fun refresh(context: Context) {
+        internal fun refresh(context: Context, source: WidgetSnapshot? = null) {
             val manager = AppWidgetManager.getInstance(context)
-            render(context, manager, manager.getAppWidgetIds(ComponentName(context, SwipeWidgetProvider::class.java)))
+            render(context, manager, manager.getAppWidgetIds(ComponentName(context, SwipeWidgetProvider::class.java)), source)
         }
 
         /**
          * One render at a time, so an older snapshot is never posted after a newer one. A launcher that
          * refuses an update must not take the app down with it.
          */
-        @Synchronized private fun render(context: Context, manager: AppWidgetManager, ids: IntArray) {
-            ids.forEach { id -> runCatching { configure(context, manager, id) } }
+        private fun render(context: Context, manager: AppWidgetManager, ids: IntArray, source: WidgetSnapshot? = null): Unit = synchronized(WidgetUpdateCoordinator) {
+            if (ids.isEmpty()) return
+            val state = runCatching { loadWidgetDeck(context, ids.first(), source ?: loadWidgetSnapshot(context)) }.getOrNull() ?: return
+            ids.forEach { id -> runCatching { configure(context, manager, id, state.copy(size = widgetDeckSize(context, id))) } }
         }
 
-        private fun configure(context: Context, manager: AppWidgetManager, widgetId: Int) {
-            val state = loadWidgetDeck(context, widgetId)
+        private fun configure(context: Context, manager: AppWidgetManager, widgetId: Int, state: WidgetDeckRenderState) {
             val page = WidgetDeckPageState.read(context, widgetId)
             fun sized(size: SizeF) = WidgetDeckRenderer.render(context, page, state.data, state.theme, size).apply {
                 setOnClickPendingIntent(R.id.swipe_page_open, activityIntent(context, widgetId, 0, WidgetControlActivity.ACTION_OPEN))

@@ -28,10 +28,8 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import io.github.theminionooo.tokenmonitor.MainActivity
 import io.github.theminionooo.tokenmonitor.R
-import io.github.theminionooo.tokenmonitor.data.protocol.HubProtocolParser
 import io.github.theminionooo.tokenmonitor.data.storage.DisplayPreferences
 import io.github.theminionooo.tokenmonitor.data.storage.ReduceMotionMode
-import io.github.theminionooo.tokenmonitor.data.storage.SnapshotCache
 import io.github.theminionooo.tokenmonitor.domain.HistoryPoint
 import io.github.theminionooo.tokenmonitor.domain.HubSnapshot
 import io.github.theminionooo.tokenmonitor.domain.LimitAccount
@@ -84,21 +82,6 @@ private const val OVERVIEW_CHART_DP = 301
 /** Below these heights the overview drops its second window and then the tool legend. */
 private const val OVERVIEW_SECOND_ROW_DP = 221
 private const val OVERVIEW_LEGEND_DP = 200
-private const val OVERVIEW_CHART_BARS_DP = 36f
-
-/**
- * Everything in the detailed layout except the chart bars has a fixed dp height, so the bar area is
- * whatever the launcher height leaves over. Drawing the bitmap at exactly that size keeps it sharp.
- */
-internal fun largeChartBarsDp(heightDp: Float, providerBlocks: Int, threeStats: Boolean = heightDp >= LARGE_THREE_STATS_DP): Float {
-    val limits = 22 + if (providerBlocks == 0) 18 else 57 * providerBlocks
-    val figure = if (threeStats) 79 else 62
-    val fixed = 16 + 48 + figure + 9 + 34 + 9 + limits + 9 + 6 + 16 + 4 + 16
-    return (heightDp - fixed).coerceAtLeast(16f)
-}
-
-/** The overview chart has fixed bars; the figure takes the spare height instead. */
-internal fun overviewChartBarsDp(heightDp: Float, quotaRows: Int): Float = OVERVIEW_CHART_BARS_DP
 
 internal fun widgetTokens(value: Long): String = formatTokens(value)
 internal data class CounterFrame(val value: Long?, val previous: Long? = value, val child: Int = 0, val changed: Boolean = false)
@@ -168,17 +151,13 @@ class UsageWidgetProvider : AppWidgetProvider() {
     companion object {
         private val frames = mutableMapOf<Int, CounterFrame>()
 
-        @Synchronized internal fun refresh(context: Context) {
+        internal fun refresh(context: Context, source: WidgetSnapshot? = null): Unit = synchronized(WidgetUpdateCoordinator) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, UsageWidgetProvider::class.java))
             if (ids.isEmpty()) return
-            val session = WidgetRuntime.session
-            val cached = if ((session.enabled || session.refreshing) && session.snapshot != null) null else SnapshotCache(context).read()?.let { wire ->
-                runCatching {
-                    HubProtocolParser.decodeSnapshot(wire.health, wire.stats, wire.devices, wire.history, wire.subscriptions, wire.capturedAt, true)
-                }.getOrNull()
-            }
-            val snapshot = listOfNotNull(session.snapshot, cached).maxByOrNull { it.capturedAt }
+            val loaded = source ?: loadWidgetSnapshot(context)
+            val session = loaded.session
+            val snapshot = loaded.snapshot
             val display = DisplayPreferences(context).options.value
             val systemDark = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
             val theme = resolveInterfaceTheme(display.themeCode, display.followSystemTheme, systemDark)
@@ -188,40 +167,42 @@ class UsageWidgetProvider : AppWidgetProvider() {
                 else -> Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
             }
             val fontScale = context.resources.configuration.fontScale.coerceAtLeast(1f)
-            ids.forEach { id ->
-                val frame = synchronized(frames) { counterFrame(frames[id], snapshot?.today?.totalTokens).also { frames[id] = it } }
-                val options = manager.getAppWidgetOptions(id)
-                fun sized(layout: WidgetLayout, size: SizeF) = render(context, snapshot, theme, layout, frame, motion, session, size)
-                val views = if (Build.VERSION.SDK_INT >= 31) {
-                    // The launcher lists every size this widget can take; each gets a render drawn for exactly that space.
-                    val sizes = if (Build.VERSION.SDK_INT >= 33) {
-                        options.getParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, SizeF::class.java)
+            WidgetChartMeasurements(context).use { chartMeasurements ->
+                ids.forEach { id ->
+                    val frame = synchronized(frames) { counterFrame(frames[id], snapshot?.today?.totalTokens).also { frames[id] = it } }
+                    val options = manager.getAppWidgetOptions(id)
+                    fun sized(layout: WidgetLayout, size: SizeF) = render(context, snapshot, theme, layout, frame, motion, session, size, chartMeasurements)
+                    val views = if (Build.VERSION.SDK_INT >= 31) {
+                        // The launcher lists every size this widget can take; each gets a render drawn for exactly that space.
+                        val sizes = if (Build.VERSION.SDK_INT >= 33) {
+                            options.getParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, SizeF::class.java)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            options.getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
+                        }.orEmpty()
+                            .filter { it.width > 0 && it.height > 0 }.distinct().take(16)
+                        if (sizes.isEmpty()) {
+                            RemoteViews(WidgetLayout.entries.associate { layout ->
+                                val size = SizeF(layout.width.toFloat(), layout.requiredHeight(fontScale))
+                                size to sized(layout, size)
+                            })
+                        } else {
+                            RemoteViews(sizes.associateWith { size -> sized(widgetLayout(size.width.toInt(), size.height.toInt(), fontScale), size) })
+                        }
                     } else {
-                        @Suppress("DEPRECATION")
-                        options.getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
-                    }.orEmpty()
-                        .filter { it.width > 0 && it.height > 0 }.distinct().take(16)
-                    if (sizes.isEmpty()) {
-                        RemoteViews(WidgetLayout.entries.associate { layout ->
-                            val size = SizeF(layout.width.toFloat(), layout.requiredHeight(fontScale))
-                            size to sized(layout, size)
-                        })
-                    } else {
-                        RemoteViews(sizes.associateWith { size -> sized(widgetLayout(size.width.toInt(), size.height.toInt(), fontScale), size) })
+                        fun forSize(widthKey: String, heightKey: String): RemoteViews {
+                            val width = options.getInt(widthKey)
+                            val height = options.getInt(heightKey)
+                            val layout = widgetLayout(width, height, fontScale)
+                            return sized(layout, SizeF(width.coerceAtLeast(layout.width).toFloat(), height.coerceAtLeast(layout.height).toFloat()))
+                        }
+                        RemoteViews(
+                            forSize(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT),
+                            forSize(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT),
+                        )
                     }
-                } else {
-                    fun forSize(widthKey: String, heightKey: String): RemoteViews {
-                        val width = options.getInt(widthKey)
-                        val height = options.getInt(heightKey)
-                        val layout = widgetLayout(width, height, fontScale)
-                        return sized(layout, SizeF(width.coerceAtLeast(layout.width).toFloat(), height.coerceAtLeast(layout.height).toFloat()))
-                    }
-                    RemoteViews(
-                        forSize(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT),
-                        forSize(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT),
-                    )
+                    manager.updateAppWidget(id, views)
                 }
-                manager.updateAppWidget(id, views)
             }
         }
 
@@ -234,6 +215,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
             motion: Boolean = false,
             session: WidgetSession = WidgetSession(),
             size: SizeF = SizeF(layout.width.toFloat(), layout.height.toFloat()),
+            chartMeasurements: WidgetChartMeasurements? = null,
         ): RemoteViews {
             val palette = Palette.from(theme)
             val enabled = session.enabled && session.expiresAt > System.currentTimeMillis()
@@ -355,11 +337,8 @@ class UsageWidgetProvider : AppWidgetProvider() {
             }
 
             // Limits
-            var blocks = 0
-            var rows = 0
             if (layout == WidgetLayout.Large) {
                 val quota = quotaBlocks(snapshot)
-                blocks = quota.size
                 views.setViewVisibility(R.id.widget_no_limits, if (quota.isEmpty()) View.VISIBLE else View.GONE)
                 val blockIds = listOf(
                     LargeBlockIds(R.id.widget_quota_1, R.id.widget_logo_1, R.id.widget_provider_1,
@@ -399,7 +378,6 @@ class UsageWidgetProvider : AppWidgetProvider() {
                 }
             } else if (layout != WidgetLayout.Wide) {
                 val limits = quotaRows(snapshot).take(if (layout == WidgetLayout.Compact) 1 else 2)
-                rows = limits.size
                 val showLimits = limits.isNotEmpty() && (layout != WidgetLayout.Compact || heightDp >= 195)
                 // An empty limits block still says so, except in a Compact too short to hold the line.
                 views.setViewVisibility(R.id.widget_limits, if (showLimits || (limits.isEmpty() && (layout != WidgetLayout.Compact || heightDp >= 195))) View.VISIBLE else View.GONE)
@@ -441,14 +419,17 @@ class UsageWidgetProvider : AppWidgetProvider() {
                     views.setTextColor(R.id.widget_chart_total, muted)
                     views.setContentDescription(R.id.widget_chart_total, if (weekPoints.any { it.unpricedTokens > 0 })
                         "${formatTokens(weekPoints.sumOf { it.tokens })} tokens, ${formatUsageCost(weekPoints.sumOf { it.costUsd }, weekPoints.sumOf { it.unpricedTokens })} estimated cost" else null)
-                    val barsDp = if (layout == WidgetLayout.Large) largeChartBarsDp(heightDp, blocks) else overviewChartBarsDp(heightDp, rows)
-                    views.setImageViewBitmap(R.id.widget_chart_bars, trend(week, byDay, palette, contentWidth, (barsDp * density).roundToInt(), density))
                     val dayIds = listOf(R.id.widget_day_0, R.id.widget_day_1, R.id.widget_day_2, R.id.widget_day_3, R.id.widget_day_4, R.id.widget_day_5, R.id.widget_day_6)
                     dayIds.forEachIndexed { index, id ->
                         views.setTextViewText(id, week[index].format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault())).uppercase(Locale.getDefault()))
                         views.setTextColor(id, if (index == 6) ink else muted)
                     }
                     views.setContentDescription(R.id.widget_chart, "Seven calendar days of tokens; a dash means no recorded data")
+                    val chartSize = chartMeasurements?.measure(views, layout, size)
+                        ?: WidgetChartMeasurements(context).use { it.measure(views, layout, size) }
+                    if (chartSize.width > 0 && chartSize.height > 0) {
+                        views.setImageViewBitmap(R.id.widget_chart_bars, trend(week, byDay, palette, chartSize.width, chartSize.height, density))
+                    }
                 }
             }
 
@@ -634,7 +615,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
 
         /** Seven calendar days ending on the snapshot date; today takes the accent, a missing day a dash. */
         private fun trend(days: List<LocalDate>, byDay: Map<String, HistoryPoint>, palette: Palette, width: Int, height: Int, density: Float): Bitmap {
-            val bitmap = Bitmap.createBitmap(width.coerceAtLeast(7), height.coerceAtLeast(2), Bitmap.Config.ARGB_8888)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             val maximum = days.mapNotNull { byDay[it.toString()]?.tokens }.maxOrNull()?.coerceAtLeast(1) ?: 1L
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)

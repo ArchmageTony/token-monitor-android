@@ -5,10 +5,22 @@ import android.content.ComponentName
 import android.content.Context
 
 internal object WidgetUpdateCoordinator {
+    /** Live/Refresh already renders repository emissions; saving those emissions is not a second update. */
+    fun refreshSaved(context: Context) {
+        if (shouldRefreshSavedWidget(WidgetRuntime.session)) refresh(context)
+    }
+
     /** Called from the disk queue, Live and plain threads; a launcher that refuses an update must not crash any of them. */
-    fun refresh(context: Context) {
-        runCatching { UsageWidgetProvider.refresh(context) }
-        runCatching { SwipeWidgetProvider.refresh(context) }
+    @Synchronized fun refresh(context: Context) {
+        runCatching {
+            val manager = AppWidgetManager.getInstance(context)
+            val responsive = manager.getAppWidgetIds(ComponentName(context, UsageWidgetProvider::class.java))
+            val pages = manager.getAppWidgetIds(ComponentName(context, SwipeWidgetProvider::class.java))
+            if (responsive.isEmpty() && pages.isEmpty()) return
+            val source = loadWidgetSnapshot(context)
+            runCatching { if (responsive.isNotEmpty()) UsageWidgetProvider.refresh(context, source) }
+            runCatching { if (pages.isNotEmpty()) SwipeWidgetProvider.refresh(context, source) }
+        }
     }
 
     fun stopLiveIfUnused(context: Context) {
@@ -18,3 +30,5 @@ internal object WidgetUpdateCoordinator {
         if (!hasResponsive && !hasDeck) WidgetLiveService.stop(context)
     }
 }
+
+internal fun shouldRefreshSavedWidget(session: WidgetSession): Boolean = !session.enabled && !session.refreshing
