@@ -149,6 +149,7 @@ internal class HubRepository(context: Context) {
     private var activeWorkMode = HubWorkMode.Idle
     private var subscriptionJob: Job? = null
     private var activeApi: HubApiClient? = null
+    private val dashboardOwners = mutableSetOf<Any>()
     @Volatile private var dashboardVisible = false
     @Volatile private var widgetActive = false
     @Volatile private var widgetDeadline: Long? = null
@@ -158,9 +159,20 @@ internal class HubRepository(context: Context) {
     private var lastSubscriptionAttemptAt = 0L
     private var attemptedSubscriptionVersion = ""
 
-    fun setDashboardVisible(visible: Boolean) {
-        dashboardVisible = visible
+    fun setDashboardVisible(owner: Any, visible: Boolean) {
+        updateDashboardOwner(owner, visible)
         reconcileWork()
+    }
+
+    /** Reassert this screen's lifecycle state and restart once, even if its lease was lost. */
+    fun refreshDashboard(owner: Any) {
+        updateDashboardOwner(owner, true)
+        reconcileWork(forceRefresh = true)
+    }
+
+    private fun updateDashboardOwner(owner: Any, visible: Boolean) {
+        if (visible) dashboardOwners.add(owner) else dashboardOwners.remove(owner)
+        dashboardVisible = dashboardOwners.isNotEmpty()
     }
 
     fun setWidgetActive(active: Boolean, deadlineElapsedRealtime: Long? = null) {
@@ -169,7 +181,7 @@ internal class HubRepository(context: Context) {
         reconcileWork()
     }
 
-    private fun reconcileWork() {
+    private fun reconcileWork(forceRefresh: Boolean = false) {
         _state.update { it.copy(localNetworkPermissionRequired = needsLocalPermission()) }
         val desired = desiredWorkMode
         if (desired == HubWorkMode.Idle) {
@@ -178,17 +190,15 @@ internal class HubRepository(context: Context) {
             return
         }
         network.start()
-        if (foregroundJob?.isActive != true || activeWorkMode != desired) {
+        if (forceRefresh || foregroundJob?.isActive != true || activeWorkMode != desired) {
             stopForegroundWork()
             startForegroundWork(desired)
         }
     }
 
     fun refreshNow() {
-        val desired = desiredWorkMode
-        if (connection == null || desired == HubWorkMode.Idle) return
-        stopForegroundWork()
-        startForegroundWork(desired)
+        if (connection == null || !workAllowed) return
+        reconcileWork(forceRefresh = true)
     }
 
     suspend fun validateAndSave(rawUrl: String, rawFallbackUrl: String, secret: String, allowLocalNetwork: Boolean): String? {
