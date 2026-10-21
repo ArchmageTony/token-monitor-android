@@ -136,11 +136,12 @@ Session rows also show generation speed, cache-hit percentage and prompt-cache e
 ## Get connected
 
 You need Android 8.0 or newer and a desktop running Token Monitor with Hub hosting
-on. The source candidate targets desktop v0.77.0; the signed public release is
-still Android v0.76.0 r1. The v0.77.0 candidate has not been phone-tested, and
-the Pages widget redraw after an in-place install remains a pending phone check.
+on. The signed public release is Android v0.77.0 r1, checked against desktop
+v0.77.0 with synthetic Hub data and emulators. I haven't phone-tested this release.
+The [Pages widget redraw after an in-place install](https://github.com/The-Minion-oOo/token-monitor-android/issues/60)
+remains a pending phone check.
 
-1. Follow [Installing and updating](docs/INSTALL.md) to get the signed v0.76.0 r1 APK.
+1. Follow [Installing and updating](docs/INSTALL.md) to get the signed v0.77.0 r1 APK.
 2. Put [Tailscale](https://tailscale.com/) on the desktop and the phone, signed into the same tailnet.
 3. In desktop Token Monitor, open **Settings → Multi-device Sync → Host Hub** and copy the address and shared secret.
 4. In the app, type the address that starts with `100.`, paste the secret, tap **Connect**. Just the numbers are enough.
@@ -154,10 +155,10 @@ Desktop v0.64's optional iCloud Drive sync does not replace the Hub connection f
 
 | | |
 | --- | --- |
-| Current public release | [`v0.76.0-r1`](https://github.com/The-Minion-oOo/token-monitor-android/releases/tag/android-v0.76.0-r1) |
+| Current public release | [`v0.77.0-r1`](https://github.com/The-Minion-oOo/token-monitor-android/releases/tag/android-v0.77.0-r1) |
 | Earlier published upgrade check | signed `v0.66.0-r1` over v0.65.0 r1; pairing, home Wi-Fi reconnection and placed Pages widget preserved |
-| Source candidate | `v0.77.0-r1`, not published or phone-tested |
-| Remaining phone checks | Candidate upgrade, Pages redraw without opening the app, Tailscale/Wi-Fi transitions, screen-off expiry and battery behavior |
+| Current phone coverage | `v0.77.0-r1` has not been phone-tested |
+| Remaining phone checks | v0.77.0 upgrade, Pages redraw without opening the app, Tailscale/Wi-Fi transitions, screen-off expiry and battery behavior |
 | Desktop baseline | Token Monitor `v0.77.0` |
 | Upstream commit | [`c83ee3a`](https://github.com/Javis603/token-monitor/commit/c83ee3aeb6d23505257113c29ef010040deb52f7) |
 
