@@ -52,9 +52,16 @@ a phone collector, new permission or another connection owner.
 ## Connection lifecycle
 
 `MainActivity` forwards resume and pause to `DashboardViewModel`, which tells
-`HubRepository` whether a dashboard is visible. Settings does not count as a
-dashboard. Opening it releases dashboard ownership; an explicit widget session
+`HubRepository` whether that dashboard is visible, using a token unique to each
+ViewModel. Pausing or clearing an older screen releases only its own token, so it
+cannot stop a replacement screen's stream. Settings does not count as a
+dashboard. Opening it releases that screen's ownership; an explicit widget session
 can keep the same shared repository active on its lighter polling mode.
+
+Refresh reapplies the calling screen's resumed dashboard state before restarting
+the shared connection once. A paused screen or Settings cannot acquire streaming
+ownership through Refresh. The last dashboard release still stops networking or
+returns it to the explicit widget session's polling mode.
 
 When a dashboard becomes visible the repository:
 
@@ -66,6 +73,12 @@ When a dashboard becomes visible the repository:
    `snapshot` and `stats` events replace the wire snapshot. Small `freshness`
    events are merged by `HubStreamProtocol`, which updates only timestamp and
    stale metadata while retaining periods, sessions, providers, and device history.
+   These events reuse the decoded usage data. Bounded metadata patches are kept
+   alongside the last complete wire body and materialized on IO for cache writes.
+   New devices or expanded device/limit fields use the complete decoder instead.
+   Complete events are decoded directly from their original body or SSE envelope;
+   normalization is deferred to cache persistence. JSON serialization uses a
+   streaming writer rather than rebuilding text separately for every nested node.
 3. On stream failure, reports "Live updates paused", waits according to
    `BackoffPolicy` (bounded exponential with jitter), and reconnects while the
    dashboard is still visible.
@@ -81,6 +94,20 @@ HTTP client and a generation token so cancelled work cannot replace newer state.
 A callback active only while a dashboard or explicit widget session needs it restarts the connection when routes change.
 Reconnections fetch a full snapshot to recover missed history. Subscription
 refreshes are single-flight and throttle retries of a failed version.
+
+Startup reads and decodes the compressed snapshot on IO. Saved pairing state is
+available immediately, and cached activity appears when loading completes. A
+delayed cache read cannot replace a newer network snapshot or restore a pairing
+that was changed or disconnected during loading.
+
+Complete updates reconcile equal periods, sessions, projects, limits and history
+on IO before publication. Unchanged data retains its existing references, so
+Compose does not repeatedly compare independently decoded session collections.
+
+Widget cache saves refresh the launcher only when no Live or Refresh collector
+owns rendering. Explicit session stop and disconnect updates still redraw. A
+coordinated refresh shares one snapshot read/decode across both widget types;
+the pages widget prepares its data once for all instances in that refresh.
 
 ### Two addresses, one connection
 
@@ -208,6 +235,12 @@ and settings. Shared presentation rules live alongside them in focused files:
   title but uses the latest member time and combined message count. The Home
   and Sessions views share these readings; context and cache-TTL estimates
   remain individual-session information.
+  Grouping and sorting run on a background dispatcher only when the month or
+  today session lists change. The slow clock still updates row activity and
+  running overflow without regrouping the lists.
+  Home receives the two session lists directly. Preparation and prepared-row
+  keys compare their references; changed lists are grouped on the background
+  dispatcher and publish without a structural comparison on the main thread.
 
 - **Projects and Home counts.** Optional project model maps pass through the
   wire adapter into `ProjectUsage`. `ProjectBreakdown` bounds each share and
@@ -224,6 +257,11 @@ and settings. Shared presentation rules live alongside them in focused files:
 `ActivityHeatmap.kt` computes the rolling twelve-month contribution grid and
 its intensity ramp outside Compose so partial or duplicated history is handled
 deterministically and unit-tested. The Compose layer only draws the cells.
+Home prepares this data when its Activity item enters the lazy list; other
+dashboard screens do not prepare a hidden Home heatmap. Home and Trends merge
+daily history on a background dispatcher, retaining the last result while new
+usage is prepared. Their cache inputs include attribution and the source date,
+but exclude session changes and transport timestamps within that date.
 
 ## Deliberate limits
 
@@ -262,3 +300,12 @@ new data changes it; app Reduce Motion switches to a static TextView. This is no
 the Compose per-digit renderer. No intermediate token values or animation timer
 are sent through AppWidgetManager. Resizing adds quota rows and a seven-day chart;
 missing history observations are shown as gaps.
+
+The responsive widget's chart bitmap uses the chart ImageView's measured pixel
+size. An unattached copy of the configured native layout accounts for individual
+dimension rounding, weighted rows and font-dependent placeholder text without
+changing launcher geometry. Each refresh shares dimensions for matching layout
+sizes across widget instances, then discards the cache. Background refreshes use
+a private measurement Looper that is stopped and joined when the batch ends,
+including on failure; measurement never waits for the main thread while holding
+the widget coordinator lock. No hierarchy is attached to a window.
