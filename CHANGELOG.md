@@ -3,7 +3,7 @@
 Android releases use the desktop protocol version plus an Android revision.
 Unreleased work stays under **Next release** until its signed APK is published.
 
-## Next release — v0.77.0 r1
+## v0.77.0 r1 — 2026-10-21
 
 - I updated the desktop baseline to v0.77.0 and added New API account spend
   for Today, Month, the rolling seven days and All time when reported.
