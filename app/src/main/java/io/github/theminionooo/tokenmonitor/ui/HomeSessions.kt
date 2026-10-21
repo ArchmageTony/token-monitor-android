@@ -6,18 +6,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.referentialEqualityPolicy
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.theminionooo.tokenmonitor.domain.HubSnapshot
+import io.github.theminionooo.tokenmonitor.domain.SessionUsage
 import java.time.Instant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Home is a recent-session summary, independent of the selected usage period. Like the desktop it groups
  * subagents and continuations under their conversation, keeps the chosen number of newest rows and never hides a row
  * that is running or waiting for a reply.
  */
-internal fun recentHomeSessions(snapshot: HubSnapshot, now: Long, count: Int = 5): List<SessionRow> {
-    val all = snapshot.month.sessions + snapshot.today.sessions
+internal fun recentHomeSessions(snapshot: HubSnapshot, now: Long, count: Int = 5): List<SessionRow> =
+    visibleHomeSessions(groupHomeSessions(snapshot.month.sessions, snapshot.today.sessions), now, count)
+
+internal fun groupHomeSessions(month: List<SessionUsage>, today: List<SessionUsage>): List<SessionRow> {
+    val all = month + today
     val sessions = all.filter { it.sessionKind != "background-review" }
         .distinctBy { it.client to it.id }
         .filter { session ->
@@ -25,21 +37,45 @@ internal fun recentHomeSessions(snapshot: HubSnapshot, now: Long, count: Int = 5
         }
     return groupSessions(sessions, evidence = all)
         .sortedByDescending { it.sortTime }
-        .filterIndexed { index, row ->
-            index < count.coerceIn(1, 50) || sessionRowActivity(row, now) in setOf(SessionActivityState.Running, SessionActivityState.Waiting)
-        }
+}
+
+internal fun visibleHomeSessions(grouped: List<SessionRow>, now: Long, count: Int = 5): List<SessionRow> =
+    grouped.filterIndexed { index, row ->
+        index < count.coerceIn(1, 50) || sessionRowActivity(row, now) in setOf(SessionActivityState.Running, SessionActivityState.Waiting)
+    }
+
+/** Decoder reconciliation owns structural comparisons; preparation keys only track new inputs. */
+private class ReferenceKey(private val value: Any?) {
+    override fun equals(other: Any?): Boolean = other is ReferenceKey && value === other.value
+    override fun hashCode(): Int = System.identityHashCode(value)
+}
+
+/** Also keeps compiler-generated parameter and lambda comparisons off the session contents. */
+internal class HomeSessionInputs(val month: List<SessionUsage>, val today: List<SessionUsage>) {
+    override fun equals(other: Any?): Boolean = other is HomeSessionInputs && month === other.month && today === other.today
+    override fun hashCode(): Int = 31 * System.identityHashCode(month) + System.identityHashCode(today)
 }
 
 @Composable
-internal fun HomeSessionsModule(snapshot: HubSnapshot, count: Int = 5, onChoose: (DashboardDestination) -> Unit) {
+internal fun HomeSessionsModule(
+    inputs: HomeSessionInputs,
+    count: Int = 5,
+    onChoose: (DashboardDestination) -> Unit,
+) {
     val now = LocalNow.current
-    val rows = recentHomeSessions(snapshot, now, count)
+    var grouped by remember { mutableStateOf<List<SessionRow>?>(null, referentialEqualityPolicy()) }
+    LaunchedEffect(inputs) {
+        grouped = withContext(Dispatchers.Default) { groupHomeSessions(inputs.month, inputs.today) }
+    }
+    val rows = remember(ReferenceKey(grouped), now, count) { visibleHomeSessions(grouped.orEmpty(), now, count) }
     val states = rows.map { sessionRowActivity(it, now) }
     val waiting = states.count { it == SessionActivityState.Waiting }
     val meta = listOfNotNull("${states.count { it == SessionActivityState.Running }} running", waiting.takeIf { it > 0 }?.let { "$it waiting" })
         .joinToString(" · ")
-    DesktopModule("SESSIONS", DashboardDestination.Sessions, onChoose, meta = meta) {
-        if (rows.isEmpty()) {
+    DesktopModule("SESSIONS", DashboardDestination.Sessions, onChoose, meta = meta.takeIf { grouped != null }) {
+        if (grouped == null) {
+            MutedCopy("Loading sessions…")
+        } else if (rows.isEmpty()) {
             MutedCopy("No recent sessions reported by the Hub")
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -422,6 +422,54 @@ async function isolatedContract(source, output, upstream) {
         responses["classified-history.json"] = historyApi.mergeHistories([classified], { todayKey: day });
         assert.equal(responses["classified-history.json"].daily[0].perClient.grok.unclassifiedTokens, 0);
         assert.equal(responses["classified-history.json"].daily[0].perModel["grok-4"].outputTokens, 75);
+        // v0.77: provider billing periods, unknown Cursor plans, and distinct Cline identities.
+        // The released collector sees only stubbed GET responses; no account or vendor network is used.
+        const { fetchThirdPartyLimits } = require("./src/shared/providers/thirdparty/limits.js");
+        const previousZone = process.env.TZ;
+        process.env.TZ = "UTC";
+        let newApi;
+        try {
+            newApi = await fetchThirdPartyLimits({ thirdPartyProfiles: { synthetic: {
+                adapter: "newapi-account", baseUrl: "https://synthetic.example", accessToken: "NEVER_EXPORT_NEWAPI", userId: "42"
+            } } }, { env: {}, now: () => Date.parse("2026-10-21T12:00:00Z"), fetch: async (url, init) => {
+                const parsed = new URL(url);
+                assert.equal(parsed.origin, "https://synthetic.example");
+                assert.equal(init.method, "GET");
+                assert.equal(init.redirect, "error");
+                let data;
+                if (parsed.pathname === "/api/status") data = { quota_per_unit: 1_000_000 };
+                else if (parsed.pathname === "/api/user/self") data = { quota: 25_000_000, used_quota: 5_000_000 };
+                else {
+                    assert.equal(parsed.pathname, "/api/data/self");
+                    const days = (Number(parsed.searchParams.get("end_timestamp")) - Number(parsed.searchParams.get("start_timestamp"))) / 86400;
+                    data = [{ quota: days < 2 ? 500_000 : days < 8 ? 750_000 : 2_000_000 }];
+                }
+                return { ok: true, status: 200, json: async () => ({ success: true, data }), headers: { get: () => null } };
+            } });
+        } finally {
+            if (previousZone === undefined) delete process.env.TZ; else process.env.TZ = previousZone;
+        }
+        assert.equal(newApi.length, 1);
+        assert.equal(newApi[0].balance.todaySpend, 0.5);
+        assert.equal(newApi[0].balance.weekSpend, 0.75);
+        assert.equal(newApi[0].balance.monthSpend, 2);
+        assert.equal(newApi[0].balance.allTimeSpend, 5);
+        const unknownCursor = await fetchCursorLimits({}, { now: () => Date.parse(now),
+            readActiveAccount: () => ({ id: "synthetic-unknown", sessionToken: "NEVER_EXPORT_CURSOR_TOKEN" }),
+            probe: async () => ({ ok: true, usage: { membershipType: "premium", autoPercent: 0, apiPercent: 0 }, user: { sub: "synthetic-unknown" } }) });
+        assert.equal(unknownCursor.status, "unavailable");
+        assert.deepEqual(unknownCursor.windows, []);
+        const billingHub = createHub({ port: 0, host: "127.0.0.1", secret, dataFile: join(source, "synthetic-billing.json") });
+        const cline = key => ({ provider: "cline", accountKey: `sha256:${key.repeat(64)}`, accountEmail: "same@example.invalid",
+            accountLabel: "Sample Cline", status: "ok", updatedAt: now,
+            windows: [{ kind: "billing", label: "Balance", metric: "credits", currency: "USD", remaining: key === "a" ? 10 : 20 }] });
+        billingHub.ingest({ ...device, limits: { updatedAt: now, providers: [...newApi, unknownCursor, cline("a")] } });
+        billingHub.ingest({ ...device, deviceId: "second-synthetic-desktop", limits: { updatedAt: now, providers: [cline("b")] } });
+        responses["billing.json"] = billingHub.getStats();
+        const providers = responses["billing.json"].limits.providers;
+        assert.equal(providers.filter(p => p.provider === "cline").length, 2);
+        assert.equal(providers.find(p => p.provider === "thirdparty").adapterId, "newapi-account");
+        assert.ok(!JSON.stringify(responses["billing.json"]).includes("NEVER_EXPORT"));
         await mkdir(output, { recursive: true });
         for (const [name, value] of Object.entries(responses)) await writeFile(join(output, name), `${JSON.stringify(value, null, 2)}\n`);
         console.log(`Actual ${upstream.tag} Hub passed authenticated reads, snapshot, freshness and changed-stat checks. Synthetic responses: ${output}`);
@@ -453,7 +501,8 @@ if (workerSource) {
         const env = Object.fromEntries(["PATH", "Path", "SystemRoot", "SYSTEMROOT", "WINDIR", "TEMP", "TMP"]
             .filter(key => process.env[key]).map(key => [key, process.env[key]]));
         Object.assign(env, { HOME: directory, USERPROFILE: directory, APPDATA: directory, LOCALAPPDATA: directory,
-            XDG_CONFIG_HOME: directory, TOKEN_MONITOR_SHARED_DIR: directory, TZ: "UTC" });
+            XDG_CONFIG_HOME: directory, TOKEN_MONITOR_SHARED_DIR: directory, TZ: "UTC",
+            NODE_PATH: join(root, "tools/node_modules") });
         execFileSync(process.execPath, [script, "--isolated-source", directory, "--output", resolve(option("--output") || join(root, "app/build/hub-contract"))],
             { env, cwd: directory, stdio: "inherit", timeout: 30_000 });
     } finally {

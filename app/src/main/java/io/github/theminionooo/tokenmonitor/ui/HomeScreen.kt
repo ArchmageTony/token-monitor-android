@@ -109,8 +109,6 @@ internal fun LazyListScope.homeItems(
     usage: UsagePeriod,
     period: DashboardPeriod,
     displayOptions: DisplayOptions,
-    history: List<HistoryPoint>,
-    activity: ActivityHeatmap,
     onChoose: (DashboardDestination) -> Unit,
 ) {
     displayOptions.visibleHomeModules.forEach { module ->
@@ -119,15 +117,19 @@ internal fun LazyListScope.homeItems(
             "Tools" -> item { DesktopModule("TOOLS", DashboardDestination.Tools, onChoose) { HomeBreakdown(usage.clients, usage.clientCosts, displayOptions.rankingMetric, unpriced = usage.clientUnpricedTokens, count = displayOptions.homeListCount("Tools")) } }
             "Devices" -> item { DesktopModule("DEVICES", DashboardDestination.Devices, onChoose) { HomeDevices(snapshot.stats.devices, period = period, aggregateUsage = usage, count = displayOptions.homeListCount("Devices")) } }
             "Models" -> item { DesktopModule("MODELS", DashboardDestination.Models, onChoose) { HomeBreakdown(usage.models, usage.modelCosts, displayOptions.rankingMetric, modelRows = true, unpriced = usage.modelUnpricedTokens, count = displayOptions.homeListCount("Models")) } }
-            "Sessions" -> item { HomeSessionsModule(snapshot, displayOptions.homeListCount("Sessions"), onChoose) }
+            "Sessions" -> item { HomeSessionsModule(HomeSessionInputs(snapshot.month.sessions, snapshot.today.sessions), displayOptions.homeListCount("Sessions"), onChoose) }
             "Activity" -> item {
+                val history = rememberUsageHistory(snapshot)
+                val date = currentPresentationDate()
+                val activity = remember(history, date) { history?.let { buildActivityHeatmap(it, date) } }
                 DesktopModule(
                     title = "ACTIVITY",
                     destination = DashboardDestination.Trends,
                     onChoose = onChoose,
-                    meta = "${activity.activeDays} active day${if (activity.activeDays == 1) "" else "s"}",
+                    meta = activity?.let { "${it.activeDays} active day${if (it.activeDays == 1) "" else "s"}" },
                 ) {
-                    HomeActivity(activity, history)
+                    if (activity == null || history == null) MutedCopy("Loading activity…")
+                    else HomeActivity(activity, history)
                 }
             }
         }
@@ -285,7 +287,6 @@ internal fun HomeListRow(
     }
 }
 
-internal fun homeActivityPoints(snapshot: HubSnapshot): List<HistoryPoint> = io.github.theminionooo.tokenmonitor.domain.usageHistory(snapshot)
 
 @Composable
 internal fun HomeActivity(activity: ActivityHeatmap, history: List<HistoryPoint>) {

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AtomicFile
 import androidx.core.content.edit
 import io.github.theminionooo.tokenmonitor.data.network.WireHubSnapshot
+import io.github.theminionooo.tokenmonitor.data.protocol.HubStreamProtocol
 import java.io.BufferedInputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -29,9 +30,11 @@ internal class SnapshotCache(context: Context) {
     }
 
     fun save(snapshot: WireHubSnapshot): Unit = synchronized(ioLock) {
-        val bounded = if (snapshot.approximateBytes() <= maxUncompressedBytes) snapshot else snapshot.copy(devices = null, history = null)
-        if (bounded.approximateBytes() > maxUncompressedBytes) return
         try {
+            val stats = if (snapshot.freshness == null) HubStreamProtocol.normalizeComplete(snapshot.stats) else snapshot.resolvedStats
+            val normalized = snapshot.copy(stats = stats, freshness = null)
+            val bounded = if (normalized.approximateBytes() <= maxUncompressedBytes) normalized else normalized.copy(devices = null, history = null)
+            if (bounded.approximateBytes() > maxUncompressedBytes) return
             val output = file.startWrite()
             try {
                 val gzip = GZIPOutputStream(output)

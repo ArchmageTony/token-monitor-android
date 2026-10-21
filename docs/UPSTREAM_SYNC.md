@@ -2,27 +2,22 @@
 
 ## Version rule
 
-Android v0.76.0 r1 targets desktop tag `v0.76.0`, peeled commit
-`fbbe4c1cb04e3277b73499016d432338c1d2ab4e`, in Gradle and `upstream.json`.
-I reviewed the changes since v0.73.0, including v0.74.0 and v0.75.0. Android
-adds project model shares and Home list counts, groups Antigravity children,
-and requires an explicit open turn for Grok Bot activity. Separate Argon quotas,
-unknown readings, Grok reasoning and classified history zeros are covered by
-the released-source checks. Oh My Pi title cleanup, Cursor quotas, timing counters,
-grouped-session ratios, counts and latest
-activity time, Goose, Notion AI,
-separate WorkBuddy accounts, token number animation, session grouping and
-waiting state, explicit unpriced-token counts, Dots labels, TM2 colors,
-separate MiMo product rows, title-consent checks and Wi-Fi recovery are
-retained. Collection, MiniMax billing-mode selection, activity watching,
-alias/pricing edits and title-sharing controls remain on desktop. Android is
-still read-only.
+The Android v0.77.0 r1 candidate targets desktop tag `v0.77.0`, peeled commit
+`c83ee3aeb6d23505257113c29ef010040deb52f7`, in Gradle and `upstream.json`.
+I reviewed the changes since v0.76.0. New API account spend is mapped to the
+existing native Limits rows with provider-reported period labels. Released-source
+checks cover unknown Cursor plans and distinct Cline identities with a shared
+display email. The Hub's persistence batching, shutdown drain and shared SSE
+serialization remain desktop internals; Android keeps its current GET endpoints,
+stream framing, retry policy and update frequency. Earlier protocol fixtures and
+presentation behavior are retained. Collection, account configuration and
+title-sharing controls remain on desktop. Android is still read-only.
 
 The latest published release is
 [`android-v0.76.0-r1`](https://github.com/The-Minion-oOo/token-monitor-android/releases/tag/android-v0.76.0-r1),
-recorded with its source commit in `release.json`. The earlier v0.66.0 r1
-upgrade on my phone preserved pairing and the placed Pages widget; later
-revisions, including v0.76.0 r1, have not been checked on it.
+recorded with its source commit in `release.json`. The v0.77.0 candidate is
+not published or phone-tested. Its performance and widget changes have emulator
+coverage; the Pages redraw after an in-place install still needs a phone check.
 
 An Android-only fix increments `versionCode` and the GitHub release revision,
 for example `android-vX.Y.Z-rN`, without changing the visible compatibility

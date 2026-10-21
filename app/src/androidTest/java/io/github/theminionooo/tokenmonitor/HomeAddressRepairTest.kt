@@ -5,6 +5,7 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.theminionooo.tokenmonitor.data.HubRepository
+import io.github.theminionooo.tokenmonitor.data.network.WireHubSnapshot
 import io.github.theminionooo.tokenmonitor.data.storage.SecureConnectionStore
 import io.github.theminionooo.tokenmonitor.domain.HubConnection
 import java.io.File
@@ -13,6 +14,8 @@ import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -67,10 +70,20 @@ class HomeAddressRepairTest {
                     }
                 }
             }
-            val repository = withContext(Dispatchers.Main) { HubRepository(context) }
+            val cacheEntered = CountDownLatch(1)
+            val releaseCache = CountDownLatch(1)
+            val repository = withContext(Dispatchers.Main) { HubRepository(context) {
+                cacheEntered.countDown()
+                check(releaseCache.await(10, TimeUnit.SECONDS))
+                WireHubSnapshot("""{"ok":true,"role":"hub"}""", """{"periods":{"today":{"totalTokens":1}}}""", null, null, null, 1)
+            } }
             try {
+                assertTrue(cacheEntered.await(5, TimeUnit.SECONDS))
                 val newAddress = "http://$address:${server.localPort}"
                 assertNull(withContext(Dispatchers.Main) { repository.repairHomeAddress(newAddress) })
+                releaseCache.countDown()
+                repository.cacheLoadJob?.join()
+                assertEquals("Late cache must not replace a verified Hub response", 1234L, repository.state.value.snapshot?.today?.totalTokens)
                 val repaired = store.read()!!
                 assertEquals(saved.baseUrl, repaired.baseUrl)
                 assertEquals(saved.secret, repaired.secret)
@@ -82,6 +95,7 @@ class HomeAddressRepairTest {
                 assertNotNull(withContext(Dispatchers.Main) { repository.repairHomeAddress(newAddress) })
                 assertEquals(repaired, store.read())
             } finally {
+                releaseCache.countDown()
                 withContext(Dispatchers.Main) { repository.close() }
                 server.close()
                 peer.join(1000)

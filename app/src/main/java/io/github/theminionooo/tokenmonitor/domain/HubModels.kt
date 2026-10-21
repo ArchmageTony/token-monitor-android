@@ -165,6 +165,7 @@ data class LimitSpend(
     val month: Double? = null,
     val allTime: Double? = null,
     val trackingSince: String = "",
+    val locallyTracked: Boolean = true,
 )
 
 data class HubLimits(

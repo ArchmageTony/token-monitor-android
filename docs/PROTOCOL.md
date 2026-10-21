@@ -4,7 +4,7 @@ This Android app treats the desktop Hub as an external, read-only protocol.
 
 ## Verified baseline
 
-The verified baseline is upstream Token Monitor **v0.76.0**, released 2026-10-20.
+The candidate baseline is upstream Token Monitor **v0.77.0**, released 2026-10-21.
 I check each release against the `Javis603/token-monitor` tag recorded in
 `upstream.json`; that tag, not a local checkout, is the protocol reference.
 
@@ -33,6 +33,10 @@ protected read without a valid secret, and `{ "error": "not_found" }` with
 HTTP 404 for an unknown route. The app gives a specific safe message for those
 conditions and does not surface request headers or the secret.
 
+The v0.77.0 Node Hub can return HTTP 503 with `hub_stopping` while shutting down.
+Android's existing unavailable/retry path handles that response and closed
+connections; it does not change polling or stream processing frequency.
+
 Android sends `x-token-monitor-stream: 2` when it opens `/api/stats/stream`.
 The Hub sends an initial `snapshot`, complete `stats` events when values change,
 and small `freshness` events for limit and device timestamps. Each data envelope
@@ -50,8 +54,15 @@ replaces the snapshot with the current read endpoints.
 
 ## Fixtures
 
-Synthetic v0.76.0 responses from the pinned Hub cover all five read endpoints
-and the live stream in `app/src/test/resources/protocol/v0.76.0/`; the retained v0.54.0, v0.55.0,
+For v0.77.0, `thirdparty` accounts with `adapterId: "newapi-account"` can carry
+`balance.todaySpend`, `weekSpend`, `monthSpend` and `allTimeSpend` with a native
+currency. Android shows only finite, nonnegative reported amounts, including
+zero. Week is a rolling seven-day period. These provider billing totals do not
+use MiMo's locally tracked labels. Other adapters retain their prior mapping.
+
+Synthetic v0.77.0 responses from the pinned Hub cover all five read endpoints,
+the live stream and provider billing in `app/src/test/resources/protocol/v0.77.0/`;
+the retained v0.76.0 and v0.54.0, v0.55.0,
 v0.56.0, v0.60.0, v0.61.0, v0.62.0, v0.63.0, v0.63.1, v0.64.0, v0.65.0, v0.66.0, v0.67.0, v0.68.0, v0.69.0, v0.70.0, v0.71.0, v0.72.0 and v0.73.0 fixtures prove backward compatibility. They contain no user secrets,
 machine paths, account identifiers, or real usage. Parser tests cover every
 read surface, the SSE envelope, omitted optional fields, and a future unknown

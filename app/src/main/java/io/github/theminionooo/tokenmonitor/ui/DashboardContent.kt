@@ -124,15 +124,13 @@ internal fun DashboardContent(
     val snapshot = state.snapshot
     val showSessionTitles = LocalSessionTitles.current
     if (snapshot == null) {
-        EmptyDashboard(modifier, state.message, { onChoose(DashboardDestination.Settings) })
+        EmptyDashboard(modifier, state.message, { onChoose(DashboardDestination.Settings) }, hasConnection = state.hasConnection)
         return
     }
-    // Aggregating a rolling range walks the whole daily history; do it once per Hub event, not per recomposition.
-    val usage = remember(snapshot, period) { period.usage(snapshot) }
-    val homeActivity = remember(snapshot) {
-        val history = homeActivityPoints(snapshot)
-        history to buildActivityHeatmap(history)
-    }
+    // Direct periods already have shared decoded data; no whole-snapshot comparison is needed.
+    val usage = if (period.statsKey != null) period.usage(snapshot)
+        else remember(snapshot, period) { period.usage(snapshot) }
+    val trendHistory = if (destination == DashboardDestination.Trends) rememberUsageHistory(snapshot) else null
     BackHandler(destination == DashboardDestination.Models && modelFilter != null) {
         onChoose(DashboardDestination.Tools)
     }
@@ -181,7 +179,7 @@ internal fun DashboardContent(
             } else "Search project, ID, or tool") }
         }
         when (destination) {
-            DashboardDestination.Home -> homeItems(snapshot, usage, period, displayOptions, homeActivity.first, homeActivity.second, onChoose)
+            DashboardDestination.Home -> homeItems(snapshot, usage, period, displayOptions, onChoose)
             DashboardDestination.Tools -> breakdownItems(
                 tokens = usage.clients,
                 costs = usage.clientCosts,
@@ -214,7 +212,8 @@ internal fun DashboardContent(
                 query = search,
             )
             DashboardDestination.Limits -> limitItems(snapshot, displayOptions)
-            DashboardDestination.Trends -> trendItems(snapshot, homeActivity.first)
+            DashboardDestination.Trends -> if (trendHistory == null) item { MutedCopy("Loading activity…") }
+                else trendItems(snapshot, trendHistory)
             DashboardDestination.Settings -> Unit
         }
         item { Spacer(Modifier.height(8.dp)) }

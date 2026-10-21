@@ -184,14 +184,15 @@ class WidgetControlsTest {
             Thread.sleep(1_000)
             assertEquals("Widget Live must not poll aggressively", 1, statsReads.get())
             lateinit var hub: io.github.theminionooo.tokenmonitor.data.HubRepository
+            val dashboardOwner = Any()
             instrumentation.runOnMainSync {
                 hub = HubRepositoryPool.acquire(context)
-                hub.setDashboardVisible(true)
+                hub.setDashboardVisible(dashboardOwner, true)
             }
             await { opened.get() == 1 && streams.get() == 1 }
             assertTrue("Dashboard streams must negotiate protocol v2", requestedStreamV2.get())
             instrumentation.runOnMainSync {
-                hub.setDashboardVisible(false)
+                hub.setDashboardVisible(dashboardOwner, false)
                 HubRepositoryPool.release(hub)
             }
             await { streams.get() == 0 && WidgetRuntime.session.connected }

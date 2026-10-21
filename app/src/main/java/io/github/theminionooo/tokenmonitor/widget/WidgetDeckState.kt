@@ -17,7 +17,10 @@ internal data class WidgetDeckRenderState(
     val size: SizeF,
 )
 
-internal fun loadWidgetDeck(context: Context, widgetId: Int): WidgetDeckRenderState {
+internal data class WidgetSnapshot(val session: WidgetSession, val snapshot: HubSnapshot?)
+
+/** Read and decode at most once for a batch of launcher updates. */
+internal fun loadWidgetSnapshot(context: Context): WidgetSnapshot {
     val session = WidgetRuntime.session
     // During a Live or refresh session the in-memory snapshot is the newest one; skip decoding the disk cache on every frame.
     val cached = if ((session.enabled || session.refreshing) && session.snapshot != null) null else SnapshotCache(context).read()?.let { wire ->
@@ -34,11 +37,18 @@ internal fun loadWidgetDeck(context: Context, widgetId: Int): WidgetDeckRenderSt
         }.getOrNull()
     }
     val snapshot: HubSnapshot? = listOfNotNull(session.snapshot, cached).maxByOrNull { it.capturedAt }
+    return WidgetSnapshot(session, snapshot)
+}
+
+internal fun loadWidgetDeck(context: Context, widgetId: Int): WidgetDeckRenderState =
+    loadWidgetDeck(context, widgetId, loadWidgetSnapshot(context))
+
+internal fun loadWidgetDeck(context: Context, widgetId: Int, source: WidgetSnapshot): WidgetDeckRenderState {
     val display = DisplayPreferences(context).options.value
     val systemDark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
     val theme = resolveInterfaceTheme(display.themeCode, display.followSystemTheme, systemDark)
     return WidgetDeckRenderState(
-        data = prepareWidgetDeck(snapshot, session),
+        data = prepareWidgetDeck(source.snapshot, source.session),
         theme = theme,
         size = widgetDeckSize(context, widgetId),
     )

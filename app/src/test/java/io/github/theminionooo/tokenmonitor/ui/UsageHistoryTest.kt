@@ -10,6 +10,34 @@ import java.time.ZoneId
 
 class UsageHistoryTest {
     private val today = LocalDate.of(2026, 9, 7)
+
+    @Test fun `history inputs ignore session and transport changes within a day`() {
+        val snapshot = liveSnapshot("2026-10-08", 30, emptyList())
+        val updated = snapshot.copy(
+            capturedAt = snapshot.capturedAt + 30_000,
+            stats = snapshot.stats.copy(
+                updatedAt = LocalDate.parse("2026-10-08").atTime(12, 1).atZone(ZoneId.systemDefault()).toInstant().toString(),
+                periods = snapshot.stats.periods + ("today" to snapshot.today.copy(
+                    sessions = listOf(SessionUsage("fresh", client = "codex", projectLabel = "Sample", totalTokens = 30,
+                        costUsd = 3.0, modelNames = emptyList(), messageCount = 0, startedAt = "", lastUsedAt = "")),
+                )),
+            ),
+        )
+        assertEquals(usageHistoryInput(snapshot), usageHistoryInput(updated))
+        assertEquals(usageHistory(snapshot), usageHistory(updated))
+    }
+
+    @Test fun `history inputs retain attribution changes and date rollover`() {
+        val snapshot = liveSnapshot("2026-10-08", 30, emptyList())
+        val changed = snapshot.copy(stats = snapshot.stats.copy(periods = snapshot.stats.periods +
+            ("today" to snapshot.today.copy(modelOutputs = mapOf("gpt-5" to 12), modelUnpricedTokens = mapOf("gpt-5" to 8)))))
+        assertNotEquals(usageHistoryInput(snapshot), usageHistoryInput(changed))
+        assertEquals(12L, usageHistory(changed).single().perModel.getValue("gpt-5").outputTokens)
+        assertEquals(8L, usageHistory(changed).single().perModel.getValue("gpt-5").unpricedTokens)
+        val tomorrow = snapshot.copy(stats = snapshot.stats.copy(updatedAt = phoneNoon("2026-10-09")))
+        assertNotEquals(usageHistoryInput(snapshot), usageHistoryInput(tomorrow))
+        assertEquals("2026-10-09", usageHistory(tomorrow).single().label)
+    }
     @Test fun `seven calendar days do not mean seven recorded days`() {
         val history = (1L..7).map { HistoryPoint(today.minusDays(it * 3).toString(), 10, 1.0) }
         assertEquals(2, historyInRange(history, today.minusDays(6), today).size)

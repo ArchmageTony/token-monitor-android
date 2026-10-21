@@ -57,6 +57,7 @@ internal data class HubDiscoveryState(
 
 internal class DashboardViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = HubRepositoryPool.acquire(application)
+    private val dashboardOwner = Any()
     private val displayPreferences = DisplayPreferences(application)
     private val serviceStatusClient = ServiceStatusClient()
 
@@ -127,7 +128,7 @@ internal class DashboardViewModel(application: Application) : AndroidViewModel(a
     }
 
     fun refresh() {
-        repository.refreshNow()
+        if (dashboardVisible) repository.refreshDashboard(dashboardOwner)
         if (_destination.value == DashboardDestination.Status) refreshServiceStatus(force = true)
     }
 
@@ -226,12 +227,12 @@ internal class DashboardViewModel(application: Application) : AndroidViewModel(a
     override fun onCleared() {
         discoveryJob?.cancel()
         serviceStatusJob?.cancel()
-        repository.setDashboardVisible(false)
+        repository.setDashboardVisible(dashboardOwner, false)
         HubRepositoryPool.release(repository)
     }
 
     private fun updateForegroundWork() {
-        repository.setDashboardVisible(resumed && _destination.value != DashboardDestination.Settings)
+        repository.setDashboardVisible(dashboardOwner, dashboardVisible)
         if (resumed && _destination.value == DashboardDestination.Status) {
             refreshServiceStatus()
         } else {
@@ -240,6 +241,8 @@ internal class DashboardViewModel(application: Application) : AndroidViewModel(a
             _serviceStatus.value = _serviceStatus.value.copy(loading = false)
         }
     }
+
+    private val dashboardVisible get() = resumed && _destination.value != DashboardDestination.Settings
 
     private fun refreshServiceStatus(force: Boolean = false) {
         if (!resumed || _destination.value != DashboardDestination.Status || serviceStatusJob?.isActive == true) return

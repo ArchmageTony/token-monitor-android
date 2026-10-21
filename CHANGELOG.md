@@ -3,6 +3,22 @@
 Android releases use the desktop protocol version plus an Android revision.
 Unreleased work stays under **Next release** until its signed APK is published.
 
+## Next release — v0.77.0 r1
+
+- I updated the desktop baseline to v0.77.0 and added New API account spend
+  for Today, Month, the rolling seven days and All time when reported.
+- I checked separate Cline account identities and missing Cursor quotas against
+  the released Hub. Missing spend stays unknown; a reported zero stays zero.
+- I reduced repeated JSON conversion, moved session/history preparation and
+  cache hydration off the UI thread, and reused unchanged update data.
+- Dashboard instances now hold separate Live ownership, and Refresh restores
+  the visible dashboard's connection without letting Settings start a stream.
+- Widgets share snapshot reads and avoid duplicate Live redraws. The responsive
+  chart uses its measured image size while keeping the existing layout.
+- Dashboard update frequency, animations and network permissions are unchanged.
+  This candidate is not phone-tested; the Pages redraw check after an in-place
+  install is still pending.
+
 ## v0.76.0 r1 — 2026-10-20
 
 - I updated the desktop baseline to v0.76.0, including the changes in v0.74.0

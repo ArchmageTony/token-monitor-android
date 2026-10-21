@@ -50,7 +50,9 @@ object HubProtocolParser {
     // here so an installed app can recover that cache without losing its pairing.
     fun decodeStats(raw: String): HubStats = statsObject(raw).toStatsDto().toDomain()
 
-    fun normalizeStatsJson(raw: String): String = statsObject(raw).toString()
+    internal fun decodeStats(stats: JsonObject): HubStats = stats.toStatsDto().toDomain()
+
+    fun normalizeStatsJson(raw: String): String = json.encodeToString(JsonObject.serializer(), statsObject(raw))
 
     private fun statsObject(raw: String): JsonObject = parseObject(raw).let { it.objectField("stats") ?: it }
 
@@ -284,7 +286,8 @@ object HubProtocolParser {
         productLabel = if (string("provider") == "mimo") string("accountLabel").takeIf {
             it in setOf("Console", "Desktop Membership", "Membership")
         }.orEmpty() else "",
-        spend = if (string("provider") == "mimo") objectField("balance")?.let { balance ->
+        spend = if (string("provider") == "mimo" ||
+            (string("provider") == "thirdparty" && string("adapterId") == "newapi-account")) objectField("balance")?.let { balance ->
             val currency = balance.string("currency").uppercase(java.util.Locale.US)
             if (!currency.matches(Regex("[A-Z]{3}"))) null else HubLimitSpendDto(
                 currency = currency,
@@ -293,6 +296,7 @@ object HubProtocolParser {
                 month = balance.double("monthSpend")?.takeIf { it.isFinite() && it >= 0 },
                 allTime = balance.double("allTimeSpend")?.takeIf { it.isFinite() && it >= 0 },
                 trackingSince = balance.string("trackingSince"),
+                locallyTracked = string("provider") == "mimo",
             )
         } else null,
     )
@@ -496,7 +500,7 @@ object HubProtocolParser {
         productLabel = productLabel,
         spend = spend?.let {
             io.github.theminionooo.tokenmonitor.domain.LimitSpend(
-                it.currency, it.today, it.week, it.month, it.allTime, it.trackingSince,
+                it.currency, it.today, it.week, it.month, it.allTime, it.trackingSince, it.locallyTracked,
             )
         },
     )

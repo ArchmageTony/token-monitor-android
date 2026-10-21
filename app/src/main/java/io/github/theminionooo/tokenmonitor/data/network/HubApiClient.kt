@@ -13,6 +13,8 @@ import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.JsonObject
+import io.github.theminionooo.tokenmonitor.data.protocol.HubStreamProtocol
 
 internal data class WireHubSnapshot(
     val health: String,
@@ -21,7 +23,13 @@ internal data class WireHubSnapshot(
     val history: String?,
     val subscriptions: String?,
     val capturedAt: Long,
-)
+    val freshness: JsonObject? = null,
+) {
+    /** Materialized only for persistence or the compatibility decoder, always on an IO thread. */
+    val resolvedStats: String by lazy {
+        freshness?.let { HubStreamProtocol.mergeFreshness(stats, it) } ?: stats
+    }
+}
 
 internal data class HubStreamEvent(
     val type: String,
