@@ -50,7 +50,9 @@ object HubProtocolParser {
     // here so an installed app can recover that cache without losing its pairing.
     fun decodeStats(raw: String): HubStats = statsObject(raw).toStatsDto().toDomain()
 
-    fun normalizeStatsJson(raw: String): String = statsObject(raw).toString()
+    internal fun decodeStats(stats: JsonObject): HubStats = stats.toStatsDto().toDomain()
+
+    fun normalizeStatsJson(raw: String): String = json.encodeToString(JsonObject.serializer(), statsObject(raw))
 
     private fun statsObject(raw: String): JsonObject = parseObject(raw).let { it.objectField("stats") ?: it }
 

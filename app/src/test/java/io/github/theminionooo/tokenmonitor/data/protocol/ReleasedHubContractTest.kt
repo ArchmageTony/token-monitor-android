@@ -32,6 +32,13 @@ class ReleasedHubContractTest {
         val streamed = HubStreamProtocol.normalizeComplete(response("stream-snapshot"))
         assertEquals(1234L, HubProtocolParser.decodeStats(streamed).periods["today"]?.totalTokens)
         val refreshed = HubStreamProtocol.mergeFreshness(streamed, response("freshness"))
+        val reduced = requireNotNull(HubStreamProtocol.applyFreshness(snapshot, HubStreamProtocol.decodeFreshness(response("freshness")), 2))
+        val decodedFreshness = HubProtocolParser.decodeSnapshot(
+            response("health"), HubStreamProtocol.mergeFreshness(response("stats"), response("freshness")),
+            response("devices"), response("history"), response("subscriptions"), 2,
+        )
+        assertEquals(decodedFreshness, reduced)
+        assertSame(snapshot.stats.periods, reduced.stats.periods)
         assertEquals(1234L, HubProtocolParser.decodeStats(refreshed).periods["today"]?.totalTokens)
         assertEquals(321L, HubProtocolParser.decodeStats(refreshed).periods["today"]?.unpricedTokens)
         val changed = HubStreamProtocol.normalizeComplete(response("stream-stats"))

@@ -41,6 +41,7 @@ import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 import io.github.theminionooo.tokenmonitor.data.network.HubNetworkObserver
 import io.github.theminionooo.tokenmonitor.widget.WidgetUpdateCoordinator
+import kotlinx.serialization.json.JsonObject
 
 internal data class HubRepositoryState(
     val hasConnection: Boolean = false,
@@ -103,13 +104,19 @@ internal class DecodedBodies {
 }
 
 /** Stream/poll updates reuse the latest device history rather than decoding the older /devices response. */
-internal fun decodeStatsUpdate(wire: WireHubSnapshot, previousDevices: List<DeviceUsage>, bodies: DecodedBodies = DecodedBodies()): HubSnapshot {
+internal fun decodeStatsUpdate(
+    wire: WireHubSnapshot,
+    previousDevices: List<DeviceUsage>,
+    bodies: DecodedBodies = DecodedBodies(),
+    previousSnapshot: HubSnapshot? = null,
+): HubSnapshot {
     val decoded = HubProtocolParser.decodeSnapshot(
-        wire.health, wire.stats, null, wire.history, wire.subscriptions, wire.capturedAt,
+        wire.health, wire.resolvedStats, null, wire.history, wire.subscriptions, wire.capturedAt,
         decodedHistory = bodies.history(wire.history), decodedSubscriptions = bodies.subscriptions(wire.subscriptions),
     )
     if (!decoded.health.ok || decoded.health.role != "hub") throw HubApiException(200, "The address is not a Token Monitor Hub.")
-    return decoded.copy(stats = retainDeviceHistory(decoded.stats, previousDevices))
+    val updated = decoded.copy(stats = retainDeviceHistory(decoded.stats, previousDevices))
+    return previousSnapshot?.let { reuseSnapshotData(it, updated) } ?: updated
 }
 
 internal enum class HubWorkMode { Idle, WidgetPolling, DashboardStreaming }
@@ -128,7 +135,7 @@ internal fun selectHubWorkMode(
 }
 
 /** Owns state on the main dispatcher; socket and disk work run on IO dispatchers. */
-internal class HubRepository(context: Context) {
+internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> WireHubSnapshot? = { it.read() }) {
     private val appContext = context.applicationContext
     private val connectionStore = SecureConnectionStore(appContext)
     private val cache = SnapshotCache(appContext)
@@ -140,7 +147,7 @@ internal class HubRepository(context: Context) {
     private val network = HubNetworkObserver(appContext) { scope.launch { if (workAllowed) refreshNow() } }
     private var connection: HubConnection? = connectionStore.read()
     private var activeUrl: String? = connection?.baseUrl
-    private var lastWireSnapshot: WireHubSnapshot? = cache.read()
+    private var lastWireSnapshot: WireHubSnapshot? = null
     private val _state = MutableStateFlow(initialState())
     val state: StateFlow<HubRepositoryState> = _state.asStateFlow()
     private var pendingCacheWrite: WireHubSnapshot? = null
@@ -158,6 +165,19 @@ internal class HubRepository(context: Context) {
     @Volatile private var generation = 0L
     private var lastSubscriptionAttemptAt = 0L
     private var attemptedSubscriptionVersion = ""
+
+    internal val cacheLoadJob: Job? = connection?.let { saved ->
+        scope.launch {
+            val cached = withContext(Dispatchers.IO) {
+                runCatching { loadCache(cache)?.let { it to parse(it, cached = true) } }.getOrNull()
+            } ?: return@launch
+            // A network response or a pairing change always wins over a delayed disk read.
+            if (connection === saved && lastWireSnapshot == null && _state.value.snapshot == null) {
+                lastWireSnapshot = cached.first
+                _state.update { it.copy(snapshot = cached.second) }
+            }
+        }
+    }
 
     fun setDashboardVisible(owner: Any, visible: Boolean) {
         updateDashboardOwner(owner, visible)
@@ -254,6 +274,7 @@ internal class HubRepository(context: Context) {
     }
 
     fun disconnect() {
+        cacheLoadJob?.cancel()
         stopForegroundWork()
         connection = null
         activeUrl = null
@@ -279,7 +300,6 @@ internal class HubRepository(context: Context) {
         activeUrl = activeUrl,
         allowLocalNetwork = connection?.allowLocalNetwork ?: false,
         localNetworkPermissionRequired = needsLocalPermission(),
-        snapshot = if (connection == null) null else lastWireSnapshot?.let { runCatching { parse(it, true) }.getOrNull() },
     )
 
     private fun startForegroundWork(mode: HubWorkMode = desiredWorkMode) {
@@ -380,12 +400,12 @@ internal class HubRepository(context: Context) {
         if (force || now - lastCacheWriteAt >= 60_000L) {
             pendingCacheWrite = null
             lastCacheWriteAt = now
-            diskQueue.enqueue { cache.save(wire); WidgetUpdateCoordinator.refresh(appContext) }
+            diskQueue.enqueue { cache.save(wire); WidgetUpdateCoordinator.refreshSaved(appContext) }
         } else pendingCacheWrite = wire
     }
 
     private fun parse(wire: WireHubSnapshot, cached: Boolean = false): HubSnapshot = HubProtocolParser.decodeSnapshot(
-        wire.health, wire.stats, wire.devices, wire.history, wire.subscriptions, wire.capturedAt, cached,
+        wire.health, wire.resolvedStats, wire.devices, wire.history, wire.subscriptions, wire.capturedAt, cached,
     ).also { if (!it.health.ok || it.health.role != "hub") throw HubApiException(200, "The address is not a Token Monitor Hub.") }
 
     private fun needsLocalPermission(): Boolean = connection?.let {
@@ -428,12 +448,22 @@ internal class HubRepository(context: Context) {
             if (streamEventType != null && streamEventType !in setOf("message", "snapshot", "stats", "freshness")) {
                 return@withContext null
             }
-            val normalized = runCatching {
-                if (streamEventType == "freshness") HubStreamProtocol.mergeFreshness(wire.stats, raw)
-                else HubStreamProtocol.normalizeComplete(raw)
-            }.getOrNull() ?: return@withContext null
-            val updatedWire = wire.copy(stats = normalized, capturedAt = System.currentTimeMillis())
-            updatedWire to decodeStatsUpdate(updatedWire, previous.stats.devices, decodedBodies)
+            runCatching {
+                val capturedAt = System.currentTimeMillis()
+                if (streamEventType == "freshness") {
+                    val patch = HubStreamProtocol.decodeFreshness(raw)
+                    val reduced = HubStreamProtocol.applyFreshness(previous, patch, capturedAt)
+                    if (reduced != null) {
+                        val accumulated = HubStreamProtocol.mergeFreshness(wire.freshness ?: JsonObject(emptyMap()), patch)
+                        return@runCatching wire.copy(capturedAt = capturedAt, freshness = accumulated) to reduced
+                    }
+                }
+                // The decoder accepts complete bodies and SSE envelopes. Keep the original text
+                // until persistence instead of parsing, stringifying and parsing it again here.
+                val stats = if (streamEventType == "freshness") HubStreamProtocol.mergeFreshness(wire.resolvedStats, raw) else raw
+                val updatedWire = wire.copy(stats = stats, capturedAt = capturedAt, freshness = null)
+                updatedWire to decodeStatsUpdate(updatedWire, previous.stats.devices, decodedBodies, previous)
+            }.getOrNull()
         } ?: return false
         if (generation != token) return false
         // A subscription request may complete while this event is being parsed.

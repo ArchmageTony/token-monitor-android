@@ -71,6 +71,12 @@ class PerformanceBaselineTest {
                     val merged = HubStreamProtocol.mergeFreshness(sample.wire.stats, freshness)
                     snapshot = decodeStatsUpdate(sample.wire.copy(stats = merged), snapshot.stats.devices)
                 }
+                val freshnessReducer = measure {
+                    val patch = HubStreamProtocol.decodeFreshness(freshness)
+                    val reduced = requireNotNull(HubStreamProtocol.applyFreshness(snapshot, patch, snapshot.capturedAt))
+                    assertEquals(snapshot, reduced)
+                    snapshot = reduced
+                }
                 val data = prepareWidgetDeck(
                     snapshot,
                     WidgetSession(snapshot = snapshot),
@@ -97,6 +103,7 @@ class PerformanceBaselineTest {
                     put("warmHydrationMs", cacheHydration)
                     put("completeParseMs", completeParse)
                     put("freshnessPathMs", freshnessPath)
+                    put("freshnessReducerMs", freshnessReducer)
                     put("widgetBitmapMs", JsonObject(renderTimings))
                 }
                 Log.i("TokenMonitorPerf", "Synthetic stats=$actualBytes bytes sessions=${sample.sessionCount} firstHydrationMs=$firstHydration")
