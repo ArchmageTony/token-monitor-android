@@ -9,10 +9,10 @@ the build it names.
 
 Every release goes through the same automated gate before I publish it:
 
-- **Unit tests and builds:** 255 JVM tests, run with the generated Hub contract
+- **Unit tests and builds:** 271 JVM tests, run with the generated Hub contract
   supplied and nothing skipped, plus Android lint, the preview debug build and
   the instrumentation APK.
-- **Instrumentation suite:** 53 tests on API 36 and API 37 emulators. A report
+- **Instrumentation suite:** 67 tests on API 36 and API 37 emulators. A report
   check requires every test to be present with no failures, errors or skips.
 - **API 26 smoke check:** the optimized R8 release APK installs, launches and
   resumes on the oldest supported version. This is not full Android 8
@@ -36,6 +36,29 @@ Every release goes through the same automated gate before I publish it:
 the exact `main` commit that gets tagged. None of these checks uses a private
 Hub or a vendor account. [Releasing](RELEASING.md) covers the process and
 [Development](DEVELOPMENT.md) covers running the checks locally.
+
+## Candidate: v0.77.0 r1
+
+The source candidate targets desktop tag `v0.77.0`, commit
+`c83ee3aeb6d23505257113c29ef010040deb52f7`. I checked its diff from v0.76.0
+and the actual released Hub with isolated synthetic input. Coverage includes
+New API billing periods, distinct same-email Cline accounts, unknown Cursor
+plans, all five read endpoints and complete/freshness stream delivery.
+
+The candidate includes dashboard JSON, preparation, cache and Live ownership
+improvements plus shared widget refreshes and measured chart sizing. The layout,
+animations and dashboard processing frequency are retained. It is not a
+published APK and has not been phone-tested. The Pages widget redraw after an
+in-place install remains a pending phone check; API 36/37 replacement checks on
+the preceding performance source recovered without opening the app.
+
+Local checks passed: all 271 JVM tests with generated v0.77.0 Hub responses and
+zero skips, lint with no errors, debug and optimized builds, 14 tooling tests,
+and all 67 instrumentation tests on each API 36 and API 37 emulator with no
+failures, errors or skips. I reviewed the full diff and a native capture of the
+New API spend rows. The optimized APK also installed, launched and resumed on
+API 26 using an emulator-only signing key; it is not a distributable upgrade.
+These are local results, separate from the CI checks required before publication.
 
 ## Current release: v0.76.0 r1
 

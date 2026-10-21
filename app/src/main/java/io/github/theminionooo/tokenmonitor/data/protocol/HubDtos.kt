@@ -146,6 +146,7 @@ internal data class HubLimitSpendDto(
     val month: Double? = null,
     val allTime: Double? = null,
     val trackingSince: String = "",
+    val locallyTracked: Boolean = true,
 )
 
 internal data class HubStatsDto(

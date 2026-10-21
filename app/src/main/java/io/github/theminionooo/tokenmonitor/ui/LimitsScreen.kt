@@ -186,11 +186,10 @@ internal fun LimitAccountRow(account: LimitAccount, displayOptions: DisplayOptio
             }
         }
         account.spend?.let { spend ->
-            listOf("Month spend" to spend.month, "All-time spend" to spend.allTime,
-                "Today spend (tracked)" to spend.today, "Week spend (tracked)" to spend.week).forEach { (label, amount) ->
-                if (amount != null) Text("$label ${formatWindowAmount(amount, spend.currency)}", color = Muted, style = MaterialTheme.typography.labelSmall)
+            limitSpendRows(spend).forEach { (label, amount) ->
+                Text("$label ${formatWindowAmount(amount, spend.currency)}", color = Muted, style = MaterialTheme.typography.labelSmall)
             }
-            if ((spend.today != null || spend.week != null) && spend.trackingSince.isNotBlank()) {
+            if (spend.locallyTracked && (spend.today != null || spend.week != null) && spend.trackingSince.isNotBlank()) {
                 Text("Tracked since ${spend.trackingSince}", color = Muted, style = MaterialTheme.typography.labelSmall)
             }
         }

@@ -49,6 +49,10 @@ formatting supplies the full warning in app rows and a compact marker in existin
 widget slots. Optional Dots coverage maps to a session flag; it does not introduce
 a phone collector, new permission or another connection owner.
 
+New API account billing periods map to the existing Limits spend rows. They keep
+their native currency and are distinguished from MiMo's locally tracked daily
+and weekly deltas. Missing or invalid values stay absent; reported zero is retained.
+
 ## Connection lifecycle
 
 `MainActivity` forwards resume and pause to `DashboardViewModel`, which tells

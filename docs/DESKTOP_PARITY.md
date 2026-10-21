@@ -1,6 +1,6 @@
-# Desktop parity for v0.76.0
+# Desktop parity for v0.77.0
 
-The Android adapter targets desktop Token Monitor v0.76.0 using
+The Android adapter targets desktop Token Monitor v0.77.0 using
 versioned fixtures and responses from the pinned released Hub. It mirrors
 the desktop information that the Hub can safely provide while keeping the phone
 read-only and lightweight.
@@ -13,6 +13,7 @@ read-only and lightweight.
 | Home lists | Separate 1–50 item counts for Tools, Models, Sessions and Devices; existing Android defaults stay unchanged |
 | Home Sessions | The chosen number of newest sessions plus running/waiting overflow, reported titles, recent context, and a link to Sessions; independent of the totals period |
 | Limits | Provider windows, remaining or used bars, reset time, plan/source metadata, separate MiMo products, native-currency wallet/spend values, MiniMax pay-as-you-go balances, and hidden-by-default account email |
+| New API account spend | Today, Month, rolling seven-day and All-time billing totals when supplied by the Hub; missing periods stay absent |
 | Tools | Token and cost totals, proportional bars, cache hit, cache miss, output, and unclassified details |
 | Status | Provider status, message, update time, and provider status-page link |
 | Devices | Device totals, clients, models, collection cadence, last upload, and retained history |

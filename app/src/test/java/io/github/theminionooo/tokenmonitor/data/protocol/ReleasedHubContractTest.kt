@@ -167,5 +167,11 @@ class ReleasedHubContractTest {
         assertEquals(75L, modernToday.sessions.single { it.client == "grok" }.outputTokens)
         val classified = HubProtocolParser.decodeSnapshot("{}", "{}", "{}", response("classified-history"), "{}", 0).history.daily.single()
         assertEquals(0L, classified.perClient.getValue("grok").unclassifiedTokens)
+        val billing = HubProtocolParser.decodeStats(response("billing")).limits.providers
+        val spend = requireNotNull(billing.single { it.provider == "thirdparty" }.spend)
+        assertEquals(listOf("Today spend" to 0.5, "Month spend" to 2.0, "7-day spend" to 0.75, "All-time spend" to 5.0),
+            io.github.theminionooo.tokenmonitor.ui.limitSpendRows(spend))
+        assertEquals(2, billing.filter { it.provider == "cline" }.map { it.accountKey }.distinct().size)
+        assertTrue(billing.single { it.provider == "cursor" }.windows.isEmpty())
     }
 }

@@ -1,0 +1,1236 @@
+{
+  "updatedAt": "2026-10-21T22:14:58.711Z",
+  "periods": {
+    "today": {
+      "capabilities": {
+        "tokenComponents": false,
+        "throughput": false
+      },
+      "totalTokens": 2468,
+      "costUsd": 0.84,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "unclassifiedTokens": 2468,
+      "timedTokens": 0,
+      "timedOutputTokens": 0,
+      "timedDurationMs": 0,
+      "clients": {
+        "mcode": 2468
+      },
+      "clientCosts": {
+        "mcode": 0.84
+      },
+      "clientCacheReads": {},
+      "clientCacheWrites": {},
+      "clientOutputs": {},
+      "clientUnclassifiedTokens": {
+        "mcode": 2468
+      },
+      "models": {
+        "minimax-m2.5": 2468
+      },
+      "modelCosts": {
+        "minimax-m2.5": 0.84
+      },
+      "modelCacheReads": {},
+      "modelCacheWrites": {},
+      "modelOutputs": {},
+      "modelUnclassifiedTokens": {
+        "minimax-m2.5": 2468
+      },
+      "clientModels": {
+        "mcode": {
+          "minimax-m2.5": 2468
+        }
+      },
+      "clientModelCosts": {},
+      "projects": {
+        "synthetic project": {
+          "label": "Synthetic project",
+          "tokens": 2468,
+          "costUsd": 0.84,
+          "clients": {},
+          "unpricedTokens": 642
+        }
+      },
+      "sessions": {
+        "mcode:contract-session": {
+          "client": "mcode",
+          "sessionId": "contract-session",
+          "totalTokens": 2468,
+          "costUsd": 0.84,
+          "messageCount": 0,
+          "inputTokens": 0,
+          "outputTokens": 0,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "reasoningTokens": 0,
+          "timedOutputTokens": 0,
+          "timedDurationMs": 0,
+          "startedAt": "",
+          "lastUsedAt": "",
+          "contextTokens": 0,
+          "contextWindow": 0,
+          "projectId": "",
+          "projectLabel": "",
+          "title": "",
+          "sessionKind": "",
+          "models": {},
+          "modelCosts": {},
+          "providers": {},
+          "unpricedTokens": 642
+        }
+      },
+      "unpricedTokens": 642,
+      "clientUnpricedTokens": {
+        "mcode": 642
+      },
+      "modelUnpricedTokens": {
+        "minimax-m2.5": 642
+      },
+      "clientModelUnpricedTokens": {
+        "mcode": {
+          "minimax-m2.5": 642
+        }
+      }
+    },
+    "month": {
+      "capabilities": {
+        "tokenComponents": false,
+        "throughput": false
+      },
+      "totalTokens": 2468,
+      "costUsd": 0.84,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "unclassifiedTokens": 2468,
+      "timedTokens": 0,
+      "timedOutputTokens": 0,
+      "timedDurationMs": 0,
+      "clients": {
+        "mcode": 2468
+      },
+      "clientCosts": {
+        "mcode": 0.84
+      },
+      "clientCacheReads": {},
+      "clientCacheWrites": {},
+      "clientOutputs": {},
+      "clientUnclassifiedTokens": {
+        "mcode": 2468
+      },
+      "models": {
+        "minimax-m2.5": 2468
+      },
+      "modelCosts": {
+        "minimax-m2.5": 0.84
+      },
+      "modelCacheReads": {},
+      "modelCacheWrites": {},
+      "modelOutputs": {},
+      "modelUnclassifiedTokens": {
+        "minimax-m2.5": 2468
+      },
+      "clientModels": {
+        "mcode": {
+          "minimax-m2.5": 2468
+        }
+      },
+      "clientModelCosts": {},
+      "projects": {
+        "synthetic project": {
+          "label": "Synthetic project",
+          "tokens": 2468,
+          "costUsd": 0.84,
+          "clients": {},
+          "unpricedTokens": 642
+        }
+      },
+      "sessions": {
+        "mcode:contract-session": {
+          "client": "mcode",
+          "sessionId": "contract-session",
+          "totalTokens": 2468,
+          "costUsd": 0.84,
+          "messageCount": 0,
+          "inputTokens": 0,
+          "outputTokens": 0,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "reasoningTokens": 0,
+          "timedOutputTokens": 0,
+          "timedDurationMs": 0,
+          "startedAt": "",
+          "lastUsedAt": "",
+          "contextTokens": 0,
+          "contextWindow": 0,
+          "projectId": "",
+          "projectLabel": "",
+          "title": "",
+          "sessionKind": "",
+          "models": {},
+          "modelCosts": {},
+          "providers": {},
+          "unpricedTokens": 642
+        }
+      },
+      "unpricedTokens": 642,
+      "clientUnpricedTokens": {
+        "mcode": 642
+      },
+      "modelUnpricedTokens": {
+        "minimax-m2.5": 642
+      },
+      "clientModelUnpricedTokens": {
+        "mcode": {
+          "minimax-m2.5": 642
+        }
+      }
+    },
+    "allTime": {
+      "capabilities": {
+        "tokenComponents": false,
+        "throughput": false
+      },
+      "totalTokens": 2468,
+      "costUsd": 0.84,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "unclassifiedTokens": 2468,
+      "timedTokens": 0,
+      "timedOutputTokens": 0,
+      "timedDurationMs": 0,
+      "clients": {
+        "mcode": 2468
+      },
+      "clientCosts": {
+        "mcode": 0.84
+      },
+      "clientCacheReads": {},
+      "clientCacheWrites": {},
+      "clientOutputs": {},
+      "clientUnclassifiedTokens": {
+        "mcode": 2468
+      },
+      "models": {
+        "minimax-m2.5": 2468
+      },
+      "modelCosts": {
+        "minimax-m2.5": 0.84
+      },
+      "modelCacheReads": {},
+      "modelCacheWrites": {},
+      "modelOutputs": {},
+      "modelUnclassifiedTokens": {
+        "minimax-m2.5": 2468
+      },
+      "clientModels": {
+        "mcode": {
+          "minimax-m2.5": 2468
+        }
+      },
+      "clientModelCosts": {},
+      "projects": {
+        "synthetic project": {
+          "label": "Synthetic project",
+          "tokens": 2468,
+          "costUsd": 0.84,
+          "clients": {},
+          "unpricedTokens": 642
+        }
+      },
+      "sessions": {
+        "mcode:contract-session": {
+          "client": "mcode",
+          "sessionId": "contract-session",
+          "totalTokens": 2468,
+          "costUsd": 0.84,
+          "messageCount": 0,
+          "inputTokens": 0,
+          "outputTokens": 0,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "reasoningTokens": 0,
+          "timedOutputTokens": 0,
+          "timedDurationMs": 0,
+          "startedAt": "",
+          "lastUsedAt": "",
+          "contextTokens": 0,
+          "contextWindow": 0,
+          "projectId": "",
+          "projectLabel": "",
+          "title": "",
+          "sessionKind": "",
+          "models": {},
+          "modelCosts": {},
+          "providers": {},
+          "unpricedTokens": 642
+        }
+      },
+      "unpricedTokens": 642,
+      "clientUnpricedTokens": {
+        "mcode": 642
+      },
+      "modelUnpricedTokens": {
+        "minimax-m2.5": 642
+      },
+      "clientModelUnpricedTokens": {
+        "mcode": {
+          "minimax-m2.5": 642
+        }
+      }
+    }
+  },
+  "devices": [
+    {
+      "deviceId": "contract-desktop",
+      "hostname": "Synthetic desktop",
+      "platform": "linux",
+      "agentVersion": "0.77.0",
+      "agentRuntime": "",
+      "updatedAt": "2026-10-21T22:14:58.395Z",
+      "receivedAt": "2026-10-21T22:14:58.708Z",
+      "ageMs": 3,
+      "stale": false,
+      "trackedClients": [
+        "mcode"
+      ],
+      "periods": {
+        "today": {
+          "capabilities": {
+            "tokenComponents": false,
+            "throughput": false
+          },
+          "totalTokens": 1234,
+          "costUsd": 0.42,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "outputTokens": 0,
+          "unclassifiedTokens": 1234,
+          "timedTokens": 0,
+          "timedOutputTokens": 0,
+          "timedDurationMs": 0,
+          "clients": {
+            "mcode": 1234
+          },
+          "clientCosts": {
+            "mcode": 0.42
+          },
+          "clientCacheReads": {},
+          "clientCacheWrites": {},
+          "clientOutputs": {},
+          "clientUnclassifiedTokens": {
+            "mcode": 1234
+          },
+          "models": {
+            "minimax-m2.5": 1234
+          },
+          "modelCosts": {
+            "minimax-m2.5": 0.42
+          },
+          "modelCacheReads": {},
+          "modelCacheWrites": {},
+          "modelOutputs": {},
+          "modelUnclassifiedTokens": {
+            "minimax-m2.5": 1234
+          },
+          "clientModels": {
+            "mcode": {
+              "minimax-m2.5": 1234
+            }
+          },
+          "clientModelCosts": {},
+          "projects": {
+            "synthetic project": {
+              "label": "Synthetic project",
+              "tokens": 1234,
+              "costUsd": 0.42,
+              "clients": {},
+              "unpricedTokens": 321
+            }
+          },
+          "sessions": {
+            "mcode:contract-session": {
+              "client": "mcode",
+              "sessionId": "contract-session",
+              "totalTokens": 1234,
+              "costUsd": 0.42,
+              "messageCount": 0,
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "reasoningTokens": 0,
+              "timedOutputTokens": 0,
+              "timedDurationMs": 0,
+              "startedAt": "",
+              "lastUsedAt": "",
+              "contextTokens": 0,
+              "contextWindow": 0,
+              "projectId": "",
+              "projectLabel": "",
+              "title": "",
+              "sessionKind": "",
+              "models": {},
+              "modelCosts": {},
+              "providers": {},
+              "unpricedTokens": 321
+            }
+          },
+          "unpricedTokens": 321,
+          "clientUnpricedTokens": {
+            "mcode": 321
+          },
+          "modelUnpricedTokens": {
+            "minimax-m2.5": 321
+          },
+          "clientModelUnpricedTokens": {
+            "mcode": {
+              "minimax-m2.5": 321
+            }
+          }
+        },
+        "month": {
+          "capabilities": {
+            "tokenComponents": false,
+            "throughput": false
+          },
+          "totalTokens": 1234,
+          "costUsd": 0.42,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "outputTokens": 0,
+          "unclassifiedTokens": 1234,
+          "timedTokens": 0,
+          "timedOutputTokens": 0,
+          "timedDurationMs": 0,
+          "clients": {
+            "mcode": 1234
+          },
+          "clientCosts": {
+            "mcode": 0.42
+          },
+          "clientCacheReads": {},
+          "clientCacheWrites": {},
+          "clientOutputs": {},
+          "clientUnclassifiedTokens": {
+            "mcode": 1234
+          },
+          "models": {
+            "minimax-m2.5": 1234
+          },
+          "modelCosts": {
+            "minimax-m2.5": 0.42
+          },
+          "modelCacheReads": {},
+          "modelCacheWrites": {},
+          "modelOutputs": {},
+          "modelUnclassifiedTokens": {
+            "minimax-m2.5": 1234
+          },
+          "clientModels": {
+            "mcode": {
+              "minimax-m2.5": 1234
+            }
+          },
+          "clientModelCosts": {},
+          "projects": {
+            "synthetic project": {
+              "label": "Synthetic project",
+              "tokens": 1234,
+              "costUsd": 0.42,
+              "clients": {},
+              "unpricedTokens": 321
+            }
+          },
+          "sessions": {
+            "mcode:contract-session": {
+              "client": "mcode",
+              "sessionId": "contract-session",
+              "totalTokens": 1234,
+              "costUsd": 0.42,
+              "messageCount": 0,
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "reasoningTokens": 0,
+              "timedOutputTokens": 0,
+              "timedDurationMs": 0,
+              "startedAt": "",
+              "lastUsedAt": "",
+              "contextTokens": 0,
+              "contextWindow": 0,
+              "projectId": "",
+              "projectLabel": "",
+              "title": "",
+              "sessionKind": "",
+              "models": {},
+              "modelCosts": {},
+              "providers": {},
+              "unpricedTokens": 321
+            }
+          },
+          "unpricedTokens": 321,
+          "clientUnpricedTokens": {
+            "mcode": 321
+          },
+          "modelUnpricedTokens": {
+            "minimax-m2.5": 321
+          },
+          "clientModelUnpricedTokens": {
+            "mcode": {
+              "minimax-m2.5": 321
+            }
+          }
+        },
+        "allTime": {
+          "capabilities": {
+            "tokenComponents": false,
+            "throughput": false
+          },
+          "totalTokens": 1234,
+          "costUsd": 0.42,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "outputTokens": 0,
+          "unclassifiedTokens": 1234,
+          "timedTokens": 0,
+          "timedOutputTokens": 0,
+          "timedDurationMs": 0,
+          "clients": {
+            "mcode": 1234
+          },
+          "clientCosts": {
+            "mcode": 0.42
+          },
+          "clientCacheReads": {},
+          "clientCacheWrites": {},
+          "clientOutputs": {},
+          "clientUnclassifiedTokens": {
+            "mcode": 1234
+          },
+          "models": {
+            "minimax-m2.5": 1234
+          },
+          "modelCosts": {
+            "minimax-m2.5": 0.42
+          },
+          "modelCacheReads": {},
+          "modelCacheWrites": {},
+          "modelOutputs": {},
+          "modelUnclassifiedTokens": {
+            "minimax-m2.5": 1234
+          },
+          "clientModels": {
+            "mcode": {
+              "minimax-m2.5": 1234
+            }
+          },
+          "clientModelCosts": {},
+          "projects": {
+            "synthetic project": {
+              "label": "Synthetic project",
+              "tokens": 1234,
+              "costUsd": 0.42,
+              "clients": {},
+              "unpricedTokens": 321
+            }
+          },
+          "sessions": {
+            "mcode:contract-session": {
+              "client": "mcode",
+              "sessionId": "contract-session",
+              "totalTokens": 1234,
+              "costUsd": 0.42,
+              "messageCount": 0,
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "reasoningTokens": 0,
+              "timedOutputTokens": 0,
+              "timedDurationMs": 0,
+              "startedAt": "",
+              "lastUsedAt": "",
+              "contextTokens": 0,
+              "contextWindow": 0,
+              "projectId": "",
+              "projectLabel": "",
+              "title": "",
+              "sessionKind": "",
+              "models": {},
+              "modelCosts": {},
+              "providers": {},
+              "unpricedTokens": 321
+            }
+          },
+          "unpricedTokens": 321,
+          "clientUnpricedTokens": {
+            "mcode": 321
+          },
+          "modelUnpricedTokens": {
+            "minimax-m2.5": 321
+          },
+          "clientModelUnpricedTokens": {
+            "mcode": {
+              "minimax-m2.5": 321
+            }
+          }
+        }
+      },
+      "limits": {
+        "updatedAt": "2026-10-21T22:14:58.395Z",
+        "refreshMs": 300000,
+        "providers": [
+          {
+            "provider": "thirdparty",
+            "adapterId": "newapi-account",
+            "accountKey": "sha256:71d9ae0fafc507caa7a439ffcae47b89bf45355ce5385a68c792a36ce6106704",
+            "accountLabel": "synthetic",
+            "planLabel": "Account",
+            "accountName": "synthetic",
+            "accountEmail": "",
+            "workspaceKind": "",
+            "status": "ok",
+            "source": "api",
+            "sourceDetail": "",
+            "updatedAt": "2026-10-21T12:00:00.000Z",
+            "windows": [
+              {
+                "kind": "billing",
+                "metric": "credits",
+                "label": "Balance",
+                "used": 5,
+                "limit": 30,
+                "remaining": 25,
+                "usedPercent": 16.666666666666664,
+                "remainingPercent": 83.333,
+                "resetsAt": null,
+                "windowMinutes": null,
+                "resetDescription": "",
+                "detail": "",
+                "currency": null,
+                "showMeter": true
+              }
+            ],
+            "balanceUsd": null,
+            "balance": {
+              "amount": 25,
+              "currency": "USD",
+              "todaySpend": 0.5,
+              "weekSpend": 0.75,
+              "monthSpend": 2,
+              "allTimeSpend": 5,
+              "requestCount": null,
+              "quotaGroup": "",
+              "expiresAt": null,
+              "trackingSince": null,
+              "monthSinceTracking": false,
+              "giftBalance": null,
+              "cashBalance": null,
+              "planUsed": null,
+              "planLimit": null,
+              "planPercent": null,
+              "planStatus": null,
+              "todayTokenTotal": null,
+              "todayUsageDate": "",
+              "latestModelUsageDate": "",
+              "todayUsageBasis": "",
+              "snapshotDate": ""
+            },
+            "resetCredits": null,
+            "region": ""
+          },
+          {
+            "provider": "cursor",
+            "accountKey": "sha256:486bd8e62b6acc4f0ced407bb2abfdda0f593c0eb9f27432d209943a91ad948d",
+            "accountLabel": "Premium",
+            "planLabel": "Premium",
+            "accountName": "",
+            "accountEmail": "",
+            "workspaceKind": "",
+            "status": "unavailable",
+            "source": "web",
+            "sourceDetail": "",
+            "updatedAt": "2026-10-21T22:14:58.395Z",
+            "windows": [],
+            "balanceUsd": null,
+            "balance": null,
+            "resetCredits": null,
+            "region": ""
+          },
+          {
+            "provider": "cline",
+            "accountKey": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "accountLabel": "Sample Cline",
+            "planLabel": "",
+            "accountName": "",
+            "accountEmail": "same@example.invalid",
+            "workspaceKind": "",
+            "status": "ok",
+            "source": "",
+            "sourceDetail": "",
+            "updatedAt": "2026-10-21T22:14:58.395Z",
+            "windows": [
+              {
+                "kind": "billing",
+                "metric": "credits",
+                "label": "Balance",
+                "used": null,
+                "limit": null,
+                "remaining": 10,
+                "usedPercent": null,
+                "remainingPercent": null,
+                "resetsAt": null,
+                "windowMinutes": null,
+                "resetDescription": "",
+                "detail": "",
+                "currency": "USD",
+                "showMeter": true
+              }
+            ],
+            "balanceUsd": null,
+            "balance": null,
+            "resetCredits": null,
+            "region": ""
+          }
+        ]
+      }
+    },
+    {
+      "deviceId": "second-synthetic-desktop",
+      "hostname": "Synthetic desktop",
+      "platform": "linux",
+      "agentVersion": "0.77.0",
+      "agentRuntime": "",
+      "updatedAt": "2026-10-21T22:14:58.395Z",
+      "receivedAt": "2026-10-21T22:14:58.709Z",
+      "ageMs": 2,
+      "stale": false,
+      "trackedClients": [
+        "mcode"
+      ],
+      "periods": {
+        "today": {
+          "capabilities": {
+            "tokenComponents": false,
+            "throughput": false
+          },
+          "totalTokens": 1234,
+          "costUsd": 0.42,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "outputTokens": 0,
+          "unclassifiedTokens": 1234,
+          "timedTokens": 0,
+          "timedOutputTokens": 0,
+          "timedDurationMs": 0,
+          "clients": {
+            "mcode": 1234
+          },
+          "clientCosts": {
+            "mcode": 0.42
+          },
+          "clientCacheReads": {},
+          "clientCacheWrites": {},
+          "clientOutputs": {},
+          "clientUnclassifiedTokens": {
+            "mcode": 1234
+          },
+          "models": {
+            "minimax-m2.5": 1234
+          },
+          "modelCosts": {
+            "minimax-m2.5": 0.42
+          },
+          "modelCacheReads": {},
+          "modelCacheWrites": {},
+          "modelOutputs": {},
+          "modelUnclassifiedTokens": {
+            "minimax-m2.5": 1234
+          },
+          "clientModels": {
+            "mcode": {
+              "minimax-m2.5": 1234
+            }
+          },
+          "clientModelCosts": {},
+          "projects": {
+            "synthetic project": {
+              "label": "Synthetic project",
+              "tokens": 1234,
+              "costUsd": 0.42,
+              "clients": {},
+              "unpricedTokens": 321
+            }
+          },
+          "sessions": {
+            "mcode:contract-session": {
+              "client": "mcode",
+              "sessionId": "contract-session",
+              "totalTokens": 1234,
+              "costUsd": 0.42,
+              "messageCount": 0,
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "reasoningTokens": 0,
+              "timedOutputTokens": 0,
+              "timedDurationMs": 0,
+              "startedAt": "",
+              "lastUsedAt": "",
+              "contextTokens": 0,
+              "contextWindow": 0,
+              "projectId": "",
+              "projectLabel": "",
+              "title": "",
+              "sessionKind": "",
+              "models": {},
+              "modelCosts": {},
+              "providers": {},
+              "unpricedTokens": 321
+            }
+          },
+          "unpricedTokens": 321,
+          "clientUnpricedTokens": {
+            "mcode": 321
+          },
+          "modelUnpricedTokens": {
+            "minimax-m2.5": 321
+          },
+          "clientModelUnpricedTokens": {
+            "mcode": {
+              "minimax-m2.5": 321
+            }
+          }
+        },
+        "month": {
+          "capabilities": {
+            "tokenComponents": false,
+            "throughput": false
+          },
+          "totalTokens": 1234,
+          "costUsd": 0.42,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "outputTokens": 0,
+          "unclassifiedTokens": 1234,
+          "timedTokens": 0,
+          "timedOutputTokens": 0,
+          "timedDurationMs": 0,
+          "clients": {
+            "mcode": 1234
+          },
+          "clientCosts": {
+            "mcode": 0.42
+          },
+          "clientCacheReads": {},
+          "clientCacheWrites": {},
+          "clientOutputs": {},
+          "clientUnclassifiedTokens": {
+            "mcode": 1234
+          },
+          "models": {
+            "minimax-m2.5": 1234
+          },
+          "modelCosts": {
+            "minimax-m2.5": 0.42
+          },
+          "modelCacheReads": {},
+          "modelCacheWrites": {},
+          "modelOutputs": {},
+          "modelUnclassifiedTokens": {
+            "minimax-m2.5": 1234
+          },
+          "clientModels": {
+            "mcode": {
+              "minimax-m2.5": 1234
+            }
+          },
+          "clientModelCosts": {},
+          "projects": {
+            "synthetic project": {
+              "label": "Synthetic project",
+              "tokens": 1234,
+              "costUsd": 0.42,
+              "clients": {},
+              "unpricedTokens": 321
+            }
+          },
+          "sessions": {
+            "mcode:contract-session": {
+              "client": "mcode",
+              "sessionId": "contract-session",
+              "totalTokens": 1234,
+              "costUsd": 0.42,
+              "messageCount": 0,
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "reasoningTokens": 0,
+              "timedOutputTokens": 0,
+              "timedDurationMs": 0,
+              "startedAt": "",
+              "lastUsedAt": "",
+              "contextTokens": 0,
+              "contextWindow": 0,
+              "projectId": "",
+              "projectLabel": "",
+              "title": "",
+              "sessionKind": "",
+              "models": {},
+              "modelCosts": {},
+              "providers": {},
+              "unpricedTokens": 321
+            }
+          },
+          "unpricedTokens": 321,
+          "clientUnpricedTokens": {
+            "mcode": 321
+          },
+          "modelUnpricedTokens": {
+            "minimax-m2.5": 321
+          },
+          "clientModelUnpricedTokens": {
+            "mcode": {
+              "minimax-m2.5": 321
+            }
+          }
+        },
+        "allTime": {
+          "capabilities": {
+            "tokenComponents": false,
+            "throughput": false
+          },
+          "totalTokens": 1234,
+          "costUsd": 0.42,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "outputTokens": 0,
+          "unclassifiedTokens": 1234,
+          "timedTokens": 0,
+          "timedOutputTokens": 0,
+          "timedDurationMs": 0,
+          "clients": {
+            "mcode": 1234
+          },
+          "clientCosts": {
+            "mcode": 0.42
+          },
+          "clientCacheReads": {},
+          "clientCacheWrites": {},
+          "clientOutputs": {},
+          "clientUnclassifiedTokens": {
+            "mcode": 1234
+          },
+          "models": {
+            "minimax-m2.5": 1234
+          },
+          "modelCosts": {
+            "minimax-m2.5": 0.42
+          },
+          "modelCacheReads": {},
+          "modelCacheWrites": {},
+          "modelOutputs": {},
+          "modelUnclassifiedTokens": {
+            "minimax-m2.5": 1234
+          },
+          "clientModels": {
+            "mcode": {
+              "minimax-m2.5": 1234
+            }
+          },
+          "clientModelCosts": {},
+          "projects": {
+            "synthetic project": {
+              "label": "Synthetic project",
+              "tokens": 1234,
+              "costUsd": 0.42,
+              "clients": {},
+              "unpricedTokens": 321
+            }
+          },
+          "sessions": {
+            "mcode:contract-session": {
+              "client": "mcode",
+              "sessionId": "contract-session",
+              "totalTokens": 1234,
+              "costUsd": 0.42,
+              "messageCount": 0,
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "reasoningTokens": 0,
+              "timedOutputTokens": 0,
+              "timedDurationMs": 0,
+              "startedAt": "",
+              "lastUsedAt": "",
+              "contextTokens": 0,
+              "contextWindow": 0,
+              "projectId": "",
+              "projectLabel": "",
+              "title": "",
+              "sessionKind": "",
+              "models": {},
+              "modelCosts": {},
+              "providers": {},
+              "unpricedTokens": 321
+            }
+          },
+          "unpricedTokens": 321,
+          "clientUnpricedTokens": {
+            "mcode": 321
+          },
+          "modelUnpricedTokens": {
+            "minimax-m2.5": 321
+          },
+          "clientModelUnpricedTokens": {
+            "mcode": {
+              "minimax-m2.5": 321
+            }
+          }
+        }
+      },
+      "limits": {
+        "updatedAt": "2026-10-21T22:14:58.395Z",
+        "refreshMs": 300000,
+        "providers": [
+          {
+            "provider": "cline",
+            "accountKey": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "accountLabel": "Sample Cline",
+            "planLabel": "",
+            "accountName": "",
+            "accountEmail": "same@example.invalid",
+            "workspaceKind": "",
+            "status": "ok",
+            "source": "",
+            "sourceDetail": "",
+            "updatedAt": "2026-10-21T22:14:58.395Z",
+            "windows": [
+              {
+                "kind": "billing",
+                "metric": "credits",
+                "label": "Balance",
+                "used": null,
+                "limit": null,
+                "remaining": 20,
+                "usedPercent": null,
+                "remainingPercent": null,
+                "resetsAt": null,
+                "windowMinutes": null,
+                "resetDescription": "",
+                "detail": "",
+                "currency": "USD",
+                "showMeter": true
+              }
+            ],
+            "balanceUsd": null,
+            "balance": null,
+            "resetCredits": null,
+            "region": ""
+          }
+        ]
+      }
+    }
+  ],
+  "projectsIncomplete": false,
+  "limits": {
+    "updatedAt": "2026-10-21T22:14:58.711Z",
+    "providers": [
+      {
+        "provider": "cline",
+        "accountKey": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "accountLabel": "Sample Cline",
+        "planLabel": "",
+        "accountName": "",
+        "accountEmail": "same@example.invalid",
+        "workspaceKind": "",
+        "status": "ok",
+        "source": "",
+        "sourceDetail": "",
+        "updatedAt": "2026-10-21T22:14:58.395Z",
+        "windows": [
+          {
+            "kind": "billing",
+            "metric": "credits",
+            "label": "Balance",
+            "used": null,
+            "limit": null,
+            "remaining": 10,
+            "usedPercent": null,
+            "remainingPercent": null,
+            "resetsAt": null,
+            "windowMinutes": null,
+            "resetDescription": "",
+            "detail": "",
+            "currency": "USD",
+            "showMeter": true
+          }
+        ],
+        "balanceUsd": null,
+        "balance": null,
+        "resetCredits": null,
+        "region": "",
+        "sourceDeviceId": "contract-desktop",
+        "stale": false
+      },
+      {
+        "provider": "cline",
+        "accountKey": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "accountLabel": "Sample Cline",
+        "planLabel": "",
+        "accountName": "",
+        "accountEmail": "same@example.invalid",
+        "workspaceKind": "",
+        "status": "ok",
+        "source": "",
+        "sourceDetail": "",
+        "updatedAt": "2026-10-21T22:14:58.395Z",
+        "windows": [
+          {
+            "kind": "billing",
+            "metric": "credits",
+            "label": "Balance",
+            "used": null,
+            "limit": null,
+            "remaining": 20,
+            "usedPercent": null,
+            "remainingPercent": null,
+            "resetsAt": null,
+            "windowMinutes": null,
+            "resetDescription": "",
+            "detail": "",
+            "currency": "USD",
+            "showMeter": true
+          }
+        ],
+        "balanceUsd": null,
+        "balance": null,
+        "resetCredits": null,
+        "region": "",
+        "sourceDeviceId": "second-synthetic-desktop",
+        "stale": false
+      },
+      {
+        "provider": "cursor",
+        "accountKey": "sha256:486bd8e62b6acc4f0ced407bb2abfdda0f593c0eb9f27432d209943a91ad948d",
+        "accountLabel": "Premium",
+        "planLabel": "Premium",
+        "accountName": "",
+        "accountEmail": "",
+        "workspaceKind": "",
+        "status": "unavailable",
+        "source": "web",
+        "sourceDetail": "",
+        "updatedAt": "2026-10-21T22:14:58.395Z",
+        "windows": [],
+        "balanceUsd": null,
+        "balance": null,
+        "resetCredits": null,
+        "region": "",
+        "sourceDeviceId": "contract-desktop",
+        "stale": false
+      },
+      {
+        "provider": "thirdparty",
+        "adapterId": "newapi-account",
+        "accountKey": "sha256:71d9ae0fafc507caa7a439ffcae47b89bf45355ce5385a68c792a36ce6106704",
+        "accountLabel": "synthetic",
+        "planLabel": "Account",
+        "accountName": "synthetic",
+        "accountEmail": "",
+        "workspaceKind": "",
+        "status": "ok",
+        "source": "api",
+        "sourceDetail": "",
+        "updatedAt": "2026-10-21T12:00:00.000Z",
+        "windows": [
+          {
+            "kind": "billing",
+            "metric": "credits",
+            "label": "Balance",
+            "used": 5,
+            "limit": 30,
+            "remaining": 25,
+            "usedPercent": 16.666666666666664,
+            "remainingPercent": 83.333,
+            "resetsAt": null,
+            "windowMinutes": null,
+            "resetDescription": "",
+            "detail": "",
+            "currency": null,
+            "showMeter": true
+          }
+        ],
+        "balanceUsd": null,
+        "balance": {
+          "amount": 25,
+          "currency": "USD",
+          "todaySpend": 0.5,
+          "weekSpend": 0.75,
+          "monthSpend": 2,
+          "allTimeSpend": 5,
+          "requestCount": null,
+          "quotaGroup": "",
+          "expiresAt": null,
+          "trackingSince": null,
+          "monthSinceTracking": false,
+          "giftBalance": null,
+          "cashBalance": null,
+          "planUsed": null,
+          "planLimit": null,
+          "planPercent": null,
+          "planStatus": null,
+          "todayTokenTotal": null,
+          "todayUsageDate": "",
+          "latestModelUsageDate": "",
+          "todayUsageBasis": "",
+          "snapshotDate": ""
+        },
+        "resetCredits": null,
+        "region": "",
+        "sourceDeviceId": "contract-desktop",
+        "stale": true
+      }
+    ]
+  },
+  "staleAfterMs": 600000,
+  "historyPreview": {
+    "daily": [
+      {
+        "date": "2026-10-21",
+        "tokens": 2468,
+        "cost": 0.84,
+        "activeTimeMs": 0,
+        "unpricedTokens": 642
+      }
+    ],
+    "monthly": [],
+    "summary": {
+      "totalTokens": 0,
+      "totalCost": 0,
+      "activeDays": 1,
+      "currentStreak": 1,
+      "longestStreak": 1,
+      "peakDayTokens": 2468,
+      "favoriteModel": "minimax-m2.5",
+      "messages": 0,
+      "activeTimeMs": 0
+    }
+  },
+  "historyRevision": "ed0cc2ccb721bfb0",
+  "deviceHistoryRevision": "f8225b43581cee77",
+  "subscriptionsUpdatedAt": "",
+  "syncSettingsRevisions": {
+    "modelAliases": 0,
+    "customPricing": 0
+  }
+}

@@ -286,7 +286,8 @@ object HubProtocolParser {
         productLabel = if (string("provider") == "mimo") string("accountLabel").takeIf {
             it in setOf("Console", "Desktop Membership", "Membership")
         }.orEmpty() else "",
-        spend = if (string("provider") == "mimo") objectField("balance")?.let { balance ->
+        spend = if (string("provider") == "mimo" ||
+            (string("provider") == "thirdparty" && string("adapterId") == "newapi-account")) objectField("balance")?.let { balance ->
             val currency = balance.string("currency").uppercase(java.util.Locale.US)
             if (!currency.matches(Regex("[A-Z]{3}"))) null else HubLimitSpendDto(
                 currency = currency,
@@ -295,6 +296,7 @@ object HubProtocolParser {
                 month = balance.double("monthSpend")?.takeIf { it.isFinite() && it >= 0 },
                 allTime = balance.double("allTimeSpend")?.takeIf { it.isFinite() && it >= 0 },
                 trackingSince = balance.string("trackingSince"),
+                locallyTracked = string("provider") == "mimo",
             )
         } else null,
     )
@@ -498,7 +500,7 @@ object HubProtocolParser {
         productLabel = productLabel,
         spend = spend?.let {
             io.github.theminionooo.tokenmonitor.domain.LimitSpend(
-                it.currency, it.today, it.week, it.month, it.allTime, it.trackingSince,
+                it.currency, it.today, it.week, it.month, it.allTime, it.trackingSince, it.locallyTracked,
             )
         },
     )

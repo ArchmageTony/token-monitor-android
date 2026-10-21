@@ -15,8 +15,10 @@ Read [Architecture](ARCHITECTURE.md) before changing runtime behavior and
 
 `local.properties` must point to the Android SDK and is ignored by Git.
 
-Install the Node tooling dependencies once with `npm ci --prefix tools`. Only the
-image tools (`build-showcase.mjs`, `subset-fonts.mjs`) need them.
+Install the Node tooling dependencies once with `npm ci --prefix tools`. The
+image tools use Sharp and font tooling; the released-Hub contract harness uses
+Undici 7.30.0, matching the reviewed upstream lockfile, to load the New API collector.
+Its network responses are stubbed; it never contacts a vendor account.
 
 ## Common commands
 
@@ -102,7 +104,7 @@ in a fixture or screenshot.
 JVM tests cover protocol parsing, private-address rules, endpoint failover,
 stream recovery, ordered cache writes, history aggregation, presentation rules,
 and preferences. Versioned Hub fixtures live under
-`app/src/test/resources/protocol/`. The v0.76.0 set covers all five read
+`app/src/test/resources/protocol/`. The v0.77.0 set covers all five read
 endpoints, a complete stream frame, and a freshness-only frame. The v0.69.0
 fixtures retain session relationships and activity, the v0.68.0
 fixtures retain unpriced counts and Dots provenance, and the v0.67.0
@@ -164,8 +166,9 @@ widgets, storage, and lifecycle behavior. Run them on an API 36 emulator before
 opening a pull request for a UI or lifecycle change. Visual changes also need a
 native screenshot at the affected phone or launcher size.
 
-The v0.76.0 fixtures are synthetic responses captured from the pinned Hub.
-They cover complete, partial and legacy project model maps; Antigravity parent
+The v0.77.0 fixtures add synthetic endpoint, stream, New API spend, Cline identity
+and unknown Cursor responses from the pinned Hub. The retained v0.76.0 fixtures
+cover complete, partial and legacy project model maps; Antigravity parent
 links and separate Argon/unknown/exhausted quota windows; Grok disjoint reasoning;
 Grok Bot recency; and classified zeros after repeated history aggregation.
 Native tests switch project shares, change and reload a Home count, verify the
@@ -286,7 +289,7 @@ ViewModel pass-through, and the control and collapsed summary in Settings.
 - **Android checks:** documentation links, release metadata, Node tooling tests,
   JVM tests, lint, and debug assembly on pull requests and pushes to `main`.
 - **Android interaction checks:** the full preview suite on API 36 and API 37
-  (SDK package `37.0`), with a JUnit report check requiring all 53 distinct tests
+  (SDK package `37.0`), with a JUnit report check requiring all 67 distinct tests
   and no failures or skips; and optimized APK install/launch/resume on API 26. Update
   the expected count when adding or removing instrumentation tests. The API 26
   build uses a disposable CI signing key and is not a distributable upgrade.
