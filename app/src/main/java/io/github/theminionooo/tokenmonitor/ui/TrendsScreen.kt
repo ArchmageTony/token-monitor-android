@@ -124,7 +124,7 @@ private fun UsageOverview(history: List<HistoryPoint>) {
         MutedCopy("No daily history is available yet.", modifier = Modifier.padding(vertical = 12.dp))
         return
     }
-    val today = LocalDate.now()
+    val today = currentPresentationDate()
     val overview = remember(history, today) { summarizeOverview(history, today) }
     val heatmap = remember(history, activityMetric, today) { buildActivityHeatmap(history, endDate = today, metric = activityMetric) }
     val unpricedTokens = overview.unpricedTokens
@@ -195,7 +195,7 @@ private fun TrendsPanel(history: List<HistoryPoint>) {
     val group = TrendGroup.entries.firstOrNull { it.name == groupName } ?: TrendGroup.Tool
     val style = TrendStyle.entries.firstOrNull { it.name == styleName } ?: TrendStyle.Bars
     val range = TrendRange.entries.firstOrNull { it.name == rangeName } ?: TrendRange.Thirty
-    val today = LocalDate.now()
+    val today = currentPresentationDate()
     val trend = remember(history, range, group, today) {
         prepareTrends(history, group == TrendGroup.Model, range.days?.let { today.minusDays(it - 1L) }, today)
     }

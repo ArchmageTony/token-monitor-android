@@ -32,7 +32,7 @@ class PresentationInteractionTest {
         val palette = Palette.from(InterfaceTheme.Default)
         compose.setContent { MaterialTheme(colorScheme = tokenMonitorColors(palette), typography = tokenMonitorTypography(1)) {
             CompositionLocalProvider(LocalPalette provides palette, LocalInteractionMotion provides false) {
-                if (home) Column(Modifier.fillMaxSize().background(palette.shell)) { HomeSessionsModule(snapshot) {} }
+                if (home) Column(Modifier.fillMaxSize().background(palette.shell)) { HomeSessionsModule(HomeSessionInputs(snapshot.month.sessions, snapshot.today.sessions)) {} }
                 else DashboardContent(Modifier.fillMaxSize().background(palette.shell), HubRepositoryState(snapshot = snapshot), destination,
                     DashboardPeriod.Today, {}, {}, false, ServiceStatusState(), DisplayOptions(), {})
             }
@@ -67,7 +67,7 @@ class PresentationInteractionTest {
         val palette = Palette.from(InterfaceTheme.Default)
         compose.setContent { MaterialTheme(colorScheme = tokenMonitorColors(palette), typography = tokenMonitorTypography(1)) {
             CompositionLocalProvider(LocalPalette provides palette, LocalInteractionMotion provides false) {
-                if (home) Column(Modifier.fillMaxSize().background(palette.shell)) { HomeSessionsModule(snapshot) {} }
+                if (home) Column(Modifier.fillMaxSize().background(palette.shell)) { HomeSessionsModule(HomeSessionInputs(snapshot.month.sessions, snapshot.today.sessions)) {} }
                 else DashboardContent(Modifier.fillMaxSize().background(palette.shell), HubRepositoryState(snapshot = snapshot), destination,
                     DashboardPeriod.Today, {}, {}, false, ServiceStatusState(), DisplayOptions(), {})
             }

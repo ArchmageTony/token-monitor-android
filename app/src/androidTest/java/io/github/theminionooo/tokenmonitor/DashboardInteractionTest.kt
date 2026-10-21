@@ -59,8 +59,9 @@ class DashboardInteractionTest {
         val snapshot = HubSnapshot(stats = HubStats(periods = mapOf("month" to UsagePeriod(sessions = listOf(metricSession())))))
         var showTitles by mutableStateOf(true)
         compose.setContent { MaterialTheme { CompositionLocalProvider(LocalNow provides now, LocalSessionTitles provides showTitles) {
-            HomeSessionsModule(snapshot) {}
+            HomeSessionsModule(HomeSessionInputs(snapshot.month.sessions, snapshot.today.sessions)) {}
         } } }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Private planning title").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Private planning title").assertIsDisplayed()
         compose.onNodeWithText("Cache hit 60% · 80 tok/s · Cache estimate ~4 min left").assertIsDisplayed()
         compose.runOnIdle { showTitles = false }
@@ -139,7 +140,7 @@ class DashboardInteractionTest {
         var chosen: DashboardDestination? = null
         compose.setContent {
             MaterialTheme { CompositionLocalProvider(LocalNow provides now) {
-                HomeSessionsModule(snapshot) { chosen = it }
+                HomeSessionsModule(HomeSessionInputs(snapshot.month.sessions, snapshot.today.sessions)) { chosen = it }
             } }
         }
         compose.onNodeWithText("fix a mixedCase bug").assertIsDisplayed()

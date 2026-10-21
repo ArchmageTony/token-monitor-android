@@ -53,6 +53,15 @@ class HomeSessionsTest {
         assertEquals(6, rows.size)
     }
 
+    @Test fun `prepared groups still expire running overflow when the clock advances`() {
+        val quiet = session("newest", now, ended = true)
+        val live = session("older", now - 60_000)
+        val grouped = groupHomeSessions(listOf(quiet, live), emptyList())
+        assertEquals(listOf("newest", "older"), visibleHomeSessions(grouped, now, 1).map { it.display.id })
+        assertEquals(listOf("newest"), visibleHomeSessions(grouped, now + 11 * 60_000, 1).map { it.display.id })
+        assertEquals(2, visibleHomeSessions(grouped, now + 11 * 60_000, 2).size)
+    }
+
     private fun snapshot(month: List<SessionUsage>, today: List<SessionUsage> = emptyList()) =
         HubSnapshot(stats = HubStats(periods = mapOf("month" to UsagePeriod(sessions = month), "today" to UsagePeriod(sessions = today))))
 

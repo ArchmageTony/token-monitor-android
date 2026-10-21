@@ -41,29 +41,48 @@ fun snapshotDate(snapshot: HubSnapshot, zone: ZoneId = ZoneId.systemDefault()): 
  * The Hub's "today" follows the desktop's calendar and its zone is not sent, so the phone's date is
  * only a guess: the Hub's own newest row says which day the live totals belong to.
  */
-fun usageHistory(snapshot: HubSnapshot): List<HistoryPoint> {
-    val history = mergeUsageHistory(snapshot.history.daily, snapshot.stats.historyPreview.daily).associateBy { it.label.take(10) }.toMutableMap()
-    val phoneDay = snapshotDate(snapshot) ?: return history.values.sortedBy { it.label }
-    val period = snapshot.stats.periods["today"] ?: return history.values.sortedBy { it.label }
+fun usageHistory(snapshot: HubSnapshot): List<HistoryPoint> = usageHistory(usageHistoryInput(snapshot))
+
+/** Only values that affect daily history; session activity and transport timestamps within a day do not. */
+internal data class UsageHistoryInput(
+    val saved: List<HistoryPoint>,
+    val preview: List<HistoryPoint>,
+    val sourceDate: LocalDate?,
+    val live: HistoryPoint?,
+)
+
+internal fun usageHistoryInput(snapshot: HubSnapshot): UsageHistoryInput {
+    fun attribution(tokens: Map<String, Long>, costs: Map<String, Double>, reads: Map<String, Long>, outputs: Map<String, Long>, writes: Map<String, Long>, unknown: Map<String, Long>, unpriced: Map<String, Long>) =
+        tokens.mapValues { (key, value) -> HistoryAttribution(value, costs[key] ?: 0.0, reads[key] ?: 0, writes[key] ?: 0, outputs[key] ?: 0, unknown[key] ?: 0, unpriced[key] ?: 0) }
+    val live = snapshot.stats.periods["today"]?.let { period ->
+        HistoryPoint(
+            label = "", tokens = period.totalTokens, costUsd = period.costUsd,
+            perClient = attribution(period.clients, period.clientCosts, period.clientCacheReads, period.clientOutputs, period.clientCacheWrites, period.clientUnclassifiedTokens, period.clientUnpricedTokens),
+            perModel = attribution(period.models, period.modelCosts, period.modelCacheReads, period.modelOutputs, period.modelCacheWrites, period.modelUnclassifiedTokens, period.modelUnpricedTokens),
+            unpricedTokens = period.unpricedTokens,
+        )
+    }
+    return UsageHistoryInput(snapshot.history.daily, snapshot.stats.historyPreview.daily, snapshotDate(snapshot), live)
+}
+
+internal fun usageHistory(input: UsageHistoryInput): List<HistoryPoint> {
+    val history = mergeUsageHistory(input.saved, input.preview).associateBy { it.label.take(10) }.toMutableMap()
+    val phoneDay = input.sourceDate ?: return history.values.sortedBy { it.label }
+    val live = input.live ?: return history.values.sortedBy { it.label }
     val latest = history.keys.mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.maxOrNull()
     val day = when {
         latest == null || latest == phoneDay -> phoneDay
         // The desktop is already on a later date than the phone.
         latest > phoneDay -> latest
         // The phone is a day ahead (or a freshness frame moved updatedAt past midnight) but the totals are still the Hub's last row.
-        latest == phoneDay.minusDays(1) && period.totalTokens > 0 && history[latest.toString()]?.tokens == period.totalTokens -> latest
+        latest == phoneDay.minusDays(1) && live.tokens > 0 && history[latest.toString()]?.tokens == live.tokens -> latest
         else -> phoneDay
     }
     val existing = history[day.toString()]
-    if (period.totalTokens == 0L && existing != null && existing.tokens > 0) return history.values.sortedBy { it.label }
-    fun attribution(tokens: Map<String, Long>, costs: Map<String, Double>, reads: Map<String, Long>, outputs: Map<String, Long>, writes: Map<String, Long>, unknown: Map<String, Long>, unpriced: Map<String, Long>) =
-        tokens.mapValues { (key, value) -> HistoryAttribution(value, costs[key] ?: 0.0, reads[key] ?: 0, writes[key] ?: 0, outputs[key] ?: 0, unknown[key] ?: 0, unpriced[key] ?: 0) }
-    history[day.toString()] = HistoryPoint(
-        label = day.toString(), tokens = period.totalTokens, costUsd = period.costUsd,
+    if (live.tokens == 0L && existing != null && existing.tokens > 0) return history.values.sortedBy { it.label }
+    history[day.toString()] = live.copy(
+        label = day.toString(),
         messages = existing?.messages ?: 0, activeTimeMs = existing?.activeTimeMs ?: 0,
-        perClient = attribution(period.clients, period.clientCosts, period.clientCacheReads, period.clientOutputs, period.clientCacheWrites, period.clientUnclassifiedTokens, period.clientUnpricedTokens),
-        perModel = attribution(period.models, period.modelCosts, period.modelCacheReads, period.modelOutputs, period.modelCacheWrites, period.modelUnclassifiedTokens, period.modelUnpricedTokens),
-        unpricedTokens = period.unpricedTokens,
     )
     return history.values.sortedBy { it.label }
 }
