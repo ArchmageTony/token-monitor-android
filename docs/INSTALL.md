@@ -13,9 +13,11 @@ Download the signed v0.77.0 r2 APK from the public
 or use **Settings → App updates** in v0.62.0 r1 or newer. It uses the same package
 and release certificate as earlier releases, with a higher version code. An
 in-app upgrade on my phone from v0.65.0 to v0.66.0 r1 preserved pairing and the
-placed Pages widget; see [Validation](VALIDATION.md). I haven't installed
-v0.77.0 r2 on my phone yet. The older v0.61.0 r1 app has no in-app updater,
-so install a newer release manually once.
+placed Pages widget; see [Validation](VALIDATION.md). I also updated my phone
+from v0.77.0 r1 to r2 through the in-app updater and confirmed that the Pages
+widget redrew without opening the app. I didn't recheck pairing, Live updates
+or the dashboard update frequency in that test. The older v0.61.0 r1 app has
+no in-app updater, so install a newer release manually once.
 
 To build the current source, install JDK 17 and Android SDK 37, then run:
 
