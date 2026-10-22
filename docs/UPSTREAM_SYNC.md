@@ -2,7 +2,7 @@
 
 ## Version rule
 
-Android v0.77.0 r1 targets desktop tag `v0.77.0`, peeled commit
+Android v0.77.0 r2 targets desktop tag `v0.77.0`, peeled commit
 `c83ee3aeb6d23505257113c29ef010040deb52f7`, in Gradle and `upstream.json`.
 I reviewed the changes since v0.76.0. New API account spend is mapped to the
 existing native Limits rows with provider-reported period labels. Released-source
@@ -14,7 +14,7 @@ presentation behavior are retained. Collection, account configuration and
 title-sharing controls remain on desktop. Android is still read-only.
 
 The latest published release is
-[`android-v0.77.0-r1`](https://github.com/The-Minion-oOo/token-monitor-android/releases/tag/android-v0.77.0-r1),
+[`android-v0.77.0-r2`](https://github.com/The-Minion-oOo/token-monitor-android/releases/tag/android-v0.77.0-r2),
 recorded with its source commit in `release.json`. I haven't phone-tested it.
 Its performance and widget changes have emulator coverage; the
 [Pages redraw after an in-place install](https://github.com/The-Minion-oOo/token-monitor-android/issues/60)
