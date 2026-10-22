@@ -83,6 +83,13 @@ When a dashboard becomes visible the repository:
    Complete events are decoded directly from their original body or SSE envelope;
    normalization is deferred to cache persistence. JSON serialization uses a
    streaming writer rather than rebuilding text separately for every nested node.
+   While usage is changing the Hub sends a complete `stats` event every few
+   seconds, so `StreamUpdateCoalescer` applies at most one complete event per
+   five seconds. The first after a quiet period applies at once; the newest
+   later one waits for the interval and replaces any older one still waiting.
+   Freshness events received while one waits apply after it, in order. A
+   `snapshot` event, a closed stream or a paused dashboard discards the held
+   event. This reduces decoding and UI work, not the bytes received.
 3. On stream failure, reports "Live updates paused", waits according to
    `BackoffPolicy` (bounded exponential with jitter), and reconnects while the
    dashboard is still visible.
