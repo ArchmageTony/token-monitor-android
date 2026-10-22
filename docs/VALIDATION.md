@@ -44,9 +44,14 @@ This Android-only release keeps desktop compatibility at `v0.77.0`, commit
 complete stream update every five seconds, always ending on the newest. On my
 phone the Hub had sent 132 complete updates in five minutes, about 260 KB each,
 during an active coding session. Widget Live, the layout, animations and
-permissions are unchanged. I haven't phone-tested this release, and the
-[Pages widget check after an in-place update](https://github.com/The-Minion-oOo/token-monitor-android/issues/60)
-is still open.
+permissions are unchanged.
+
+After publishing, I updated my phone from r1 to r2 through **Settings → App
+updates** and went to the home screen without opening the app. The Pages widget
+redrew. A plain USB install, an install followed by force-stop, and an install
+followed by a forced recompile also redrew it each time, so I closed
+[issue #60](https://github.com/The-Minion-oOo/token-monitor-android/issues/60).
+I didn't check pairing, Live updates or the update frequency on the phone.
 
 Local checks passed: 277 JVM tests, lint, documentation, release metadata and 14
 tooling tests, and all 69 instrumentation tests on the API 37 emulator,
@@ -83,10 +88,9 @@ plans, all five read endpoints and complete/freshness stream delivery.
 
 The release includes dashboard JSON, preparation, cache and Live ownership
 improvements plus shared widget refreshes and measured chart sizing. The layout,
-animations and dashboard processing frequency are retained. I haven't phone-tested
-this release. The [Pages widget redraw after an in-place install](https://github.com/The-Minion-oOo/token-monitor-android/issues/60)
-remains a pending phone check; API 36/37 replacement checks on
-the preceding performance source recovered without opening the app.
+animations and dashboard processing frequency are retained. I didn't phone-test
+this release. API 36/37 replacement checks on the preceding performance source
+recovered without opening the app; the phone check followed with r2.
 
 Local checks passed: all 271 JVM tests with generated v0.77.0 Hub responses and
 zero skips, lint with no errors, debug and optimized builds, 14 tooling tests,
@@ -126,7 +130,7 @@ build on my phone. Builds before v0.60.0 r7 are recorded in the
 
 | Release | Date | Desktop baseline | Main checks | Phone check |
 | --- | --- | --- | --- | --- |
-| v0.77.0 r2 | 2026-10-21 | v0.77.0 | One complete stream update every five seconds | No |
+| v0.77.0 r2 | 2026-10-21 | v0.77.0 | One complete stream update every five seconds | Yes: in-app update from r1; Pages widget redrew without opening the app |
 | v0.77.0 r1 | 2026-10-21 | v0.77.0 | Dashboard JSON/UI preparation, Live ownership, shared widgets and chart sizing, New API spend | No |
 | v0.76.0 r1 | 2026-10-20 | v0.76.0 | Home list counts, project model shares, Antigravity quotas and Grok Bot activity | No |
 | v0.73.0 r1 | 2026-10-16 | v0.73.0 | Oh My Pi titles, Cursor current-period quotas and matched timing | No |
@@ -189,7 +193,8 @@ What I have confirmed on the phone:
 - **In-app update path:** I updated from v0.65.0 to v0.66.0 r1 through
   **Settings → App updates** and Android's user-confirmed installer. The
   dashboard reconnected, the widget refreshed, and no Token Monitor service
-  was left running.
+  was left running. I updated from v0.77.0 r1 to r2 the same way; the Pages
+  widget redrew without opening the app.
 - **Widget layout and fonts:** One UI substitutes its own monospace face, and
   phone captures with real multi-tool, multi-model data showed crowded and
   overlapping rows that a two-row emulator fixture had hidden. That is why the
@@ -214,7 +219,8 @@ What I have confirmed on the phone:
 The published upgrade checks above apply to the named releases. Later local
 performance and widget builds were also checked on my phone, but those results
 do not establish upgrade, widget or battery behavior for the v0.77.0 release.
-The v0.77.0 r1 and r2 releases have not been phone-tested.
+I didn't phone-test v0.77.0 r1. For r2 I checked only the in-app update and the
+Pages widget redraw described above.
 
 ## Known limits
 

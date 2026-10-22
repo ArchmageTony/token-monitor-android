@@ -137,9 +137,9 @@ Session rows also show generation speed, cache-hit percentage and prompt-cache e
 
 You need Android 8.0 or newer and a desktop running Token Monitor with Hub hosting
 on. The signed public release is Android v0.77.0 r2, checked against desktop
-v0.77.0 with synthetic Hub data and emulators. I haven't phone-tested this release.
-The [Pages widget redraw after an in-place install](https://github.com/The-Minion-oOo/token-monitor-android/issues/60)
-remains a pending phone check.
+v0.77.0 with synthetic Hub data and emulators. On my phone I updated from r1 to
+r2 through **Settings → App updates**, and the Pages widget redrew without
+opening the app.
 
 1. Follow [Installing and updating](docs/INSTALL.md) to get the signed v0.77.0 r2 APK.
 2. Put [Tailscale](https://tailscale.com/) on the desktop and the phone, signed into the same tailnet.
@@ -157,8 +157,8 @@ Desktop v0.64's optional iCloud Drive sync does not replace the Hub connection f
 | --- | --- |
 | Current public release | [`v0.77.0-r2`](https://github.com/The-Minion-oOo/token-monitor-android/releases/tag/android-v0.77.0-r2) |
 | Earlier published upgrade check | signed `v0.66.0-r1` over v0.65.0 r1; pairing, home Wi-Fi reconnection and placed Pages widget preserved |
-| Current phone coverage | `v0.77.0-r2` has not been phone-tested |
-| Remaining phone checks | v0.77.0 upgrade, Pages redraw without opening the app, Tailscale/Wi-Fi transitions, screen-off expiry and battery behavior |
+| Current phone coverage | `v0.77.0-r2` in-app update from r1; Pages widget redrew without opening the app |
+| Remaining phone checks | Pairing and Live after the update, Tailscale/Wi-Fi transitions, screen-off expiry and battery behavior |
 | Desktop baseline | Token Monitor `v0.77.0` |
 | Upstream commit | [`c83ee3a`](https://github.com/Javis603/token-monitor/commit/c83ee3aeb6d23505257113c29ef010040deb52f7) |
 

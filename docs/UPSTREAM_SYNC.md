@@ -15,10 +15,9 @@ title-sharing controls remain on desktop. Android is still read-only.
 
 The latest published release is
 [`android-v0.77.0-r2`](https://github.com/The-Minion-oOo/token-monitor-android/releases/tag/android-v0.77.0-r2),
-recorded with its source commit in `release.json`. I haven't phone-tested it.
-Its performance and widget changes have emulator coverage; the
-[Pages redraw after an in-place install](https://github.com/The-Minion-oOo/token-monitor-android/issues/60)
-still needs a phone check.
+recorded with its source commit in `release.json`. Its performance and widget
+changes have emulator coverage. On my phone, the in-app update from r1 redrew
+the Pages widget without opening the app.
 
 An Android-only fix increments `versionCode` and the GitHub release revision,
 for example `android-vX.Y.Z-rN`, without changing the visible compatibility

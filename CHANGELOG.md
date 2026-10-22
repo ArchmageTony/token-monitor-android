@@ -9,7 +9,8 @@ Unreleased work stays under **Next release** until its signed APK is published.
   seconds. I limited the dashboard to at most one complete update every five
   seconds, always ending on the newest. This reduces decoding and redraw work
   on the phone; the Hub still sends every update.
-- Desktop compatibility stays at v0.77.0. This build is not phone-tested.
+- Desktop compatibility stays at v0.77.0. After release I checked the in-app
+  update from r1 on my phone; the Pages widget redrew without opening the app.
 
 ## v0.77.0 r1 — 2026-10-21
 
