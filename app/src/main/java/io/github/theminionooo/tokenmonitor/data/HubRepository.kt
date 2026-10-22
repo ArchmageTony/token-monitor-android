@@ -9,6 +9,7 @@ import io.github.theminionooo.tokenmonitor.data.network.HubAddressValidator
 import io.github.theminionooo.tokenmonitor.data.network.HubApiClient
 import io.github.theminionooo.tokenmonitor.data.network.HubApiException
 import io.github.theminionooo.tokenmonitor.data.network.HubRouteGuard
+import io.github.theminionooo.tokenmonitor.data.network.HubStreamEvent
 import io.github.theminionooo.tokenmonitor.data.network.PhoneNetworks
 import io.github.theminionooo.tokenmonitor.data.network.LocalNetworkAccess
 import io.github.theminionooo.tokenmonitor.data.network.prepareHomeAddressRepair
@@ -38,6 +39,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.coroutineContext
 import io.github.theminionooo.tokenmonitor.data.network.HubNetworkObserver
 import io.github.theminionooo.tokenmonitor.widget.WidgetUpdateCoordinator
@@ -155,6 +158,9 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
     private var foregroundJob: Job? = null
     private var activeWorkMode = HubWorkMode.Idle
     private var subscriptionJob: Job? = null
+    private val streamUpdates = StreamUpdateCoalescer()
+    private val streamApplyLock = Mutex()
+    private var streamFlushJob: Job? = null
     private var activeApi: HubApiClient? = null
     private val dashboardOwners = mutableSetOf<Any>()
     @Volatile private var dashboardVisible = false
@@ -329,18 +335,25 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
                         applySuccess(wire, snapshot)
                         connected = true
                         when (mode) {
-                            HubWorkMode.DashboardStreaming -> withContext(Dispatchers.IO) {
-                                api.streamStats(saved.copy(baseUrl = url),
-                                    onOpen = { withContext(Dispatchers.Main.immediate) {
-                                        if (generation == token) _state.update { it.copy(streamActive = true, widgetLiveActive = false) }
-                                    } },
-                                    onEvent = { event -> withContext(Dispatchers.Main.immediate) {
-                                        if (generation == token) {
-                                            if (applyStatsUpdate(event.data, token, streamEventType = event.type)) attempt = 0
-                                            refreshSubscriptions(saved, api, token)
-                                        }
-                                    } },
-                                )
+                            HubWorkMode.DashboardStreaming -> try {
+                                withContext(Dispatchers.IO) {
+                                    api.streamStats(saved.copy(baseUrl = url),
+                                        onOpen = { withContext(Dispatchers.Main.immediate) {
+                                            if (generation == token) _state.update { it.copy(streamActive = true, widgetLiveActive = false) }
+                                        } },
+                                        onEvent = { event -> withContext(Dispatchers.Main.immediate) {
+                                            if (generation == token) {
+                                                val ready = streamUpdates.offer(event, SystemClock.elapsedRealtime())
+                                                if (applyStreamEvents(ready, token)) attempt = 0
+                                                scheduleStreamFlush(saved, api, token)
+                                                refreshSubscriptions(saved, api, token)
+                                            }
+                                        } },
+                                    )
+                                }
+                            } finally {
+                                // A reconnect starts with a complete snapshot; an update held from this stream is stale.
+                                cancelStreamFlush()
                             }
                             HubWorkMode.WidgetPolling -> {
                                 _state.update { it.copy(streamActive = false, widgetLiveActive = true) }
@@ -391,6 +404,7 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
         activeWorkMode = HubWorkMode.Idle
         subscriptionJob?.cancel()
         subscriptionJob = null
+        cancelStreamFlush()
         _state.update { it.copy(refreshing = false, streamActive = false, widgetLiveActive = false) }
         pendingCacheWrite?.let { persist(it, force = true) }
     }
@@ -439,6 +453,33 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
             allowLocalNetwork = connection?.allowLocalNetwork ?: false, snapshot = snapshot,
             localNetworkPermissionRequired = needsLocalPermission(),
         )
+    }
+
+    /** The held update and a newly arrived one never decode at the same time. */
+    private suspend fun applyStreamEvents(events: List<HubStreamEvent>, token: Long): Boolean = streamApplyLock.withLock {
+        var applied = false
+        events.forEach { if (applyStatsUpdate(it.data, token, streamEventType = it.type)) applied = true }
+        applied
+    }
+
+    private fun scheduleStreamFlush(saved: HubConnection, api: HubApiClient, token: Long) {
+        if (streamFlushJob?.isActive == true) return
+        val wait = streamUpdates.flushDelay(SystemClock.elapsedRealtime()) ?: return
+        streamFlushJob = scope.launch {
+            delay(wait)
+            if (generation != token) return@launch
+            applyStreamEvents(streamUpdates.drain(SystemClock.elapsedRealtime()), token)
+            refreshSubscriptions(saved, api, token)
+            // An update that arrived while this one was decoding is held; schedule it before finishing.
+            streamFlushJob = null
+            scheduleStreamFlush(saved, api, token)
+        }
+    }
+
+    private fun cancelStreamFlush() {
+        streamFlushJob?.cancel()
+        streamFlushJob = null
+        streamUpdates.clear()
     }
 
     private suspend fun applyStatsUpdate(raw: String, token: Long, streamEventType: String? = null): Boolean {

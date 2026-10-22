@@ -202,6 +202,12 @@ What I have confirmed on the phone:
   later candidates found no active Token Monitor service or wake lock. A large
   battery drain I saw on the phone came from a UI-test helper I had left
   installed, not from Token Monitor; I removed it.
+  On 2026-10-21 I compared Widget Live with the screen off for about seven
+  minutes per build: v0.76.0 r1 against a local build of the performance
+  changes later released in v0.77.0 r1. Android attributed 1.34 s of app CPU
+  and an estimated 0.084 mAh to v0.76.0 r1, and 0.86 s and 0.050 mAh to the
+  local build. That is one short run each, and the mAh figure is Android's
+  estimate rather than measured current.
 
 The published upgrade checks above apply to the named releases. Later local
 performance and widget builds were also checked on my phone, but those results
@@ -216,8 +222,9 @@ The v0.77.0 r1 release has not been phone-tested.
   had a median warm cache hydration of 169.9 ms and a median freshness update
   of 264.9 ms. These are local observations, not timing guarantees. Widget
   timings cover off-screen bitmap drawing only.
-- Battery use has not been measured for the v0.77.0 release. Earlier measurements
-  and idle-state checks do not establish its battery use.
+- Battery use has not been measured for the v0.77.0 release itself. The short
+  Widget Live comparison above used a local build of the same performance
+  changes; it is not a measurement of the published APK.
 - API 26 is a smoke check of install, launch and resume, not full interaction
   or background coverage.
 - Tailscale and Wi-Fi route switching, screen-off Live expiry and One UI
