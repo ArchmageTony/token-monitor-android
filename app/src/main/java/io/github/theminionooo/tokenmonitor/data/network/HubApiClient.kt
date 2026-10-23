@@ -155,6 +155,8 @@ internal class HubApiClient(
         headers: Map<String, String> = emptyMap(),
     ): HttpURLConnection {
         beforeRequest(connection)
+        // Never let a bearer secret or Hub data travel to a public host without TLS, whatever was saved.
+        HubRoutes.requireHttpsForPublic(connection.baseUrl)
         val http = (URL(connection.baseUrl + path).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 10_000

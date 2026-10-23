@@ -20,6 +20,13 @@ class LocalNetworkAccessTest {
         assertFalse(HubAddressValidator.isLocalAddress("192.168.999.2"))
     }
 
+    @Test fun `a public primary with a home fallback keeps the public route when LAN access is denied`() {
+        val public = saved.copy(baseUrl = "https://hub.example.com")
+        assertEquals(listOf(public.baseUrl), LocalNetworkAccess.allowedRoutes(public, public.fallbackUrl, false))
+        assertEquals(listOf(public.fallbackUrl, public.baseUrl), LocalNetworkAccess.allowedRoutes(public, public.fallbackUrl, true))
+        assertFalse(LocalNetworkAccess.needed(public.copy(fallbackUrl = null)))
+    }
+
     @Test fun `repair preserves original primary secret and policy`() {
         val repaired = (prepareHomeAddressRepair(saved, "192.168.1.9") as HubAddressValidation.Allowed).connection
         assertEquals(saved.baseUrl, repaired.baseUrl)

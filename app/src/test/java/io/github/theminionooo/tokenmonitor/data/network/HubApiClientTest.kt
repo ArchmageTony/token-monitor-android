@@ -16,6 +16,18 @@ import java.util.concurrent.atomic.AtomicReference
 
 class HubApiClientTest {
     @Test
+    fun `a public route without https is refused before any connection is opened`() {
+        val checks = AtomicInteger()
+        HubApiClient(beforeRequest = { checks.incrementAndGet() }).use { client ->
+            val error = org.junit.Assert.assertThrows(HubApiException::class.java) {
+                client.loadSnapshot(HubConnection("http://hub.example.com", "synthetic-secret", false))
+            }
+            assertEquals(HubRoutes.httpsRequiredMessage, error.presentation)
+            assertEquals(1, checks.get())
+        }
+    }
+
+    @Test
     fun `expired ownership prevents the next endpoint in a snapshot read`() {
         val checks = AtomicInteger()
         val reads = java.util.Collections.synchronizedList(mutableListOf<String>())

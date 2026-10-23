@@ -50,6 +50,8 @@ internal data class PhoneNetworks(val lan: Boolean, val vpn: Boolean) {
  * VPN is up, because without Tailscale the 100.64/10 range is carrier-grade NAT. A home address is tried on
  * Wi-Fi or Ethernet, or through a VPN such as a Tailscale subnet router, but never directly over mobile data.
  * Names are resolved first so a hostile DNS answer cannot point a private name at a public host.
+ * A public route is usable on any network but only over HTTPS; its identity is proven by the
+ * system-trusted TLS certificate and hostname check rather than by address ranges.
  */
 internal object HubRouteGuard {
     private const val privateNameMessage = "The Hub name did not resolve to a private address, so the secret was not sent."
@@ -57,6 +59,8 @@ internal object HubRouteGuard {
     fun usable(url: String, networks: PhoneNetworks): Boolean = when {
         HubAddressValidator.isTailscaleRoute(url) -> networks.vpn
         HubAddressValidator.isLocalAddress(url) -> networks.lan || networks.vpn
+        // A public HTTPS Hub is reachable over any network, including mobile data.
+        HubRoutes.isPublicRoute(url) -> true
         else -> true
     }
 
@@ -74,6 +78,7 @@ internal object HubRouteGuard {
     /** Throws before any request when [url] cannot be used on [networks] or its name resolves outside the route's range. */
     fun require(url: String, networks: PhoneNetworks, resolve: (String) -> List<InetAddress> = ::resolveAll) {
         if (!usable(url, networks)) throw HubApiException(0, unavailableMessage(listOf(url), networks))
+        HubRoutes.requireHttpsForPublic(url)
         val host = runCatching { URI(url).host }.getOrNull()?.trim('[', ']')?.lowercase() ?: return
         if (isLiteral(host)) return
         val tailscale = HubAddressValidator.isTailscaleRoute(url)

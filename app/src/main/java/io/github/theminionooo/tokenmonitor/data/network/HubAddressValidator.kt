@@ -4,9 +4,10 @@ import io.github.theminionooo.tokenmonitor.domain.HubConnection
 import java.net.URI
 
 /**
- * Limits the dashboard to private transport. A Hub secret must never be sent to
- * an arbitrary public endpoint. Tailscale is allowed by default; RFC1918 Wi-Fi
- * hosts and mDNS names require the explicit local-network switch.
+ * Limits where the Hub secret may be sent. Tailscale is allowed by default; RFC1918 Wi-Fi
+ * hosts and mDNS names require the explicit local-network switch. Any other host is a
+ * public route, which is accepted only as an `https://` domain name (port 443 unless
+ * given) so the secret never crosses the internet in plain text.
  */
 object HubAddressValidator {
     private const val defaultPort = 17321
@@ -15,10 +16,11 @@ object HubAddressValidator {
         rawUrl: String,
         secret: String,
         allowLocalNetwork: Boolean,
+        allowPublicHttps: Boolean = true,
     ): HubAddressValidation {
         if (secret.isBlank()) return HubAddressValidation.Rejected("Enter the Hub secret before connecting.")
         val uri = try {
-            URI(normalize(rawUrl))
+            URI(normalizeForRoute(rawUrl, allowPublicHttps))
         } catch (_: Exception) {
             return HubAddressValidation.Rejected("Enter the address, such as 100.101.102.103.")
         }
@@ -42,16 +44,28 @@ object HubAddressValidator {
         val host = uri.host.lowercase().removePrefix("[").removeSuffix("]")
         val tailscale = host.endsWith(".ts.net") || isTailscaleAddress(host)
         val local = isPrivateIpv4(host) || host.endsWith(".local")
-        if (!tailscale && !(allowLocalNetwork && local)) {
+        val public = !tailscale && !local
+        if (public && allowPublicHttps) {
+            if (scheme != "https") return HubAddressValidation.Rejected(HubRoutes.httpsRequiredMessage)
+            HubRoutes.publicHostProblem(host)?.let { return HubAddressValidation.Rejected(it) }
+        } else if (!tailscale && !(allowLocalNetwork && local)) {
             return HubAddressValidation.Rejected(
-                "Use a Tailscale address, or enable a private Wi-Fi address as the main Hub.",
+                if (allowPublicHttps) {
+                    "Use a Tailscale address, enable a private Wi-Fi address as the main Hub, or use a public https:// address."
+                } else {
+                    "Use a Tailscale address, or enable a private Wi-Fi address as the main Hub."
+                },
             )
         }
-        val port = if (uri.port == -1) defaultPort else uri.port
         val displayHost = if (host.contains(':')) "[$host]" else host
+        // A public HTTPS Hub sits behind a reverse proxy on the standard port, so 443 is implied and not written.
+        val authority = when {
+            public && (uri.port == -1 || uri.port == HubRoutes.publicHttpsPort) -> displayHost
+            else -> "$displayHost:${if (uri.port == -1) defaultPort else uri.port}"
+        }
         return HubAddressValidation.Allowed(
             HubConnection(
-                baseUrl = "$scheme://$displayHost:$port",
+                baseUrl = "$scheme://$authority",
                 secret = secret.trim(),
                 allowLocalNetwork = allowLocalNetwork,
             ),
@@ -70,6 +84,17 @@ object HubAddressValidator {
     }
 
     /**
+     * Like [normalize], but a bare public domain name gains `https://` instead of `http://`, so typing
+     * `hub.example.com` reaches the HTTPS reverse proxy. Private and Tailscale hosts keep plain HTTP.
+     */
+    internal fun normalizeForRoute(rawUrl: String, allowPublicHttps: Boolean): String {
+        val normalized = normalize(rawUrl)
+        val compact = rawUrl.filterNot { it.isWhitespace() }
+        if (!allowPublicHttps || compact.isEmpty() || "://" in compact) return normalized
+        return if (HubRoutes.kind(normalized) == HubRouteKind.Public) "https://" + normalized.removePrefix("http://") else normalized
+    }
+
+    /**
      * The short route name the dashboard header and Settings show for whichever address is
      * answering: the home fallback, a Tailscale address, or another allowed private network.
      */
@@ -80,6 +105,7 @@ object HubAddressValidator {
         return when {
             host.endsWith(".ts.net") || isTailscaleAddress(host) -> "Tailscale"
             isPrivateIpv4(host) -> "Private network"
+            HubRoutes.isPublicRoute(url) -> "Internet (HTTPS)"
             else -> "Hub"
         }
     }

@@ -67,6 +67,29 @@ class HubRouteGuardTest {
     }
 
     @Test
+    fun `a public https route works on any network without a DNS range check`() {
+        val public = "https://hub.example.com"
+        val mobileOnly = PhoneNetworks(lan = false, vpn = false)
+        assertTrue(HubRouteGuard.usable(public, mobileOnly))
+        assertTrue(HubRouteGuard.usable(public, PhoneNetworks(lan = true, vpn = true)))
+        HubRouteGuard.require(public, mobileOnly) { error("public names are verified by TLS, not by DNS range") }
+        HubRouteGuard.require("https://hub.example.com:8443", mobileOnly) { error("no lookup") }
+    }
+
+    @Test
+    fun `a public route is refused before any request unless it uses https`() {
+        val error = assertThrows(HubApiException::class.java) {
+            HubRouteGuard.require("http://hub.example.com", PhoneNetworks(lan = true, vpn = true)) { error("not reached") }
+        }
+        assertEquals(HubRoutes.httpsRequiredMessage, error.presentation)
+        assertThrows(HubApiException::class.java) {
+            HubRouteGuard.require("http://203.0.113.9:17321", PhoneNetworks(lan = true, vpn = true)) { error("not reached") }
+        }
+        // Private routes keep plain HTTP.
+        HubRouteGuard.require(home, PhoneNetworks(lan = true, vpn = false)) { error("no lookup for a literal") }
+    }
+
+    @Test
     fun `tailscale IPv6 and private ranges are recognised`() {
         assertTrue(HubRouteGuard.isTailscale(InetAddress.getByName("fd7a:115c:a1e0::1")))
         assertFalse(HubRouteGuard.isTailscale(InetAddress.getByName("fd00::1")))
