@@ -3,8 +3,10 @@
 ## Network boundary
 
 The app accepts Tailscale addresses by default. Private LAN addresses require an
-explicit setting. Public targets are rejected to keep transport private and
-prevent Hub credentials from being sent to arbitrary internet hosts.
+explicit setting. Upstream rejects every public target; this fork accepts a
+public target only as an `https://` domain name (see
+[Public HTTPS route (fork)](#public-https-route-fork)), so Hub credentials are
+never sent to an internet host without TLS.
 
 [Tailscale](https://tailscale.com/docs/reference/connection-types) normally
 attempts a direct device-to-device connection and can fall back to an
@@ -31,6 +33,36 @@ The desktop Hub secret is sent as a bearer credential only to the validated Hub 
 The unauthenticated health response must identify a Token Monitor Hub before the
 first protected request is sent. HTTP redirects are rejected so an authenticated
 request cannot move the bearer secret to another host.
+
+## Public HTTPS route (fork)
+
+This fork adds a third route for a Hub published on a server behind an HTTPS
+reverse proxy, for example `https://hub.example.com`.
+
+- Only `https://` is accepted for a public host. A bare name such as
+  `hub.example.com` becomes `https://hub.example.com`; the port defaults to 443,
+  not the desktop Hub's 17321. `http://` public addresses are rejected when
+  saved, and again before every request (route guard and HTTP client), so a
+  tampered or stale record cannot send the secret in plain text.
+- The host must be a public DNS name: IP literals, single-label names,
+  `localhost`, and private-use suffixes such as `.local`, `.internal`, `.lan`
+  and `.home.arpa` are refused. Credentials, query strings (for example
+  `?secret=`) and paths are refused as for the other routes.
+- TLS uses Android's system trust store only; user-installed CAs are not
+  trusted and no certificate pinning is applied, so the proxy's normal
+  certificate renewal keeps working. Certificate and hostname failures stop the
+  request before the secret is sent and are reported as such.
+- The public route is usable on any network, including mobile data. The
+  optional home Wi-Fi fallback must still be a private address and is preferred
+  while it answers.
+- Cleartext stays enabled in the network security config only because the
+  Tailscale and LAN routes use plain HTTP to IP literals, which the config
+  cannot scope by address range. The HTTPS requirement for public hosts is
+  enforced in code and covered by unit tests.
+- The Hub secret also authorizes writes on the Hub. Use a long random secret,
+  keep the Hub bound to loopback behind the proxy, and rotate the secret on the
+  Hub and every desktop if the phone is lost.
+- The in-app updater is disabled in this fork; it does not contact GitHub.
 
 ## Local storage
 
@@ -68,6 +100,8 @@ The Status view separately reads public service-health endpoints for Claude,
 OpenAI, Cursor, and DeepSeek. Those requests do not include Hub credentials
 or Token Monitor usage data.
 
+In this fork the updater is disabled (`BuildConfig.UPDATES_ENABLED = false`) and
+the panel is hidden; the rest of this paragraph describes upstream builds.
 Opening App updates checks this app's latest published GitHub release. A
 download starts only after the user taps Download and install. These HTTPS
 requests do not include the Hub secret or usage data. Before handing the APK to

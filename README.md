@@ -31,6 +31,15 @@ numbers to your phone, with home-screen widgets for quick checks.
 
 The desktop stays the collector and the source of truth. The phone reads its Hub over your own private network and shows what it finds. That is the whole trick.
 
+> **Fork note: public HTTPS route.** This fork (app name **Token Monitor (Remote)**,
+> application ID `io.github.at.tokenmonitor`, installable beside the upstream app)
+> can also reach a Hub published on a server behind an HTTPS reverse proxy. Enter
+> the Hub's `https://` address, for example `https://hub.example.com`, plus the Hub
+> secret. Public addresses must use `https://` (port 443 unless you give one);
+> `http://` is refused for them, certificates are checked against Android's system
+> trust store, and Tailscale and home Wi-Fi routes work as before. The in-app
+> updater is disabled in this fork. See [Security and privacy](docs/SECURITY.md#public-https-route-fork).
+
 ## The desktop dashboard, made mobile
 
 <table>
@@ -127,7 +136,7 @@ Session rows also show generation speed, cache-hit percentage and prompt-cache e
 - Read-only. The app cannot change desktop settings, usage data, or files.
 - Hub credentials live in an Android Keystore-backed store and are excluded from backups.
 - No ads, analytics, wake lock, scheduled background work or "please rate us" popup.
-- **Settings → App updates** checks published GitHub releases and verifies a downloaded signed APK before Android asks to install it; there is no background update check or silent install.
+- **Settings → App updates** checks published GitHub releases and verifies a downloaded signed APK before Android asks to install it; there is no background update check or silent install. (Disabled in this fork, which does not check or install upstream releases.)
 - The visible dashboard streams immediately. Widget Live uses a lightweight 30-second stats refresh and stops after one hour.
 - Android 13 and newer asks for notification permission the first time you start a widget session, so the Stop control has somewhere to live. Android 17 also requests local-network permission when you choose home Wi-Fi access.
 
