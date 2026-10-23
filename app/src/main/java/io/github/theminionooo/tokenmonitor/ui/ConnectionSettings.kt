@@ -164,7 +164,7 @@ internal fun ConnectionScreen(
                 else -> state.connectionUrl.orEmpty().removePrefix("http://").removePrefix("https://").substringBefore(':')
             }
             SettingsGroup("Connection", summary = listOfNotNull(route, "home fallback".takeIf { state.fallbackUrl != null && route != "Home Wi-Fi" }).joinToString(" · ")) {
-                Text("This phone only reads your private desktop Hub. It cannot control the desktop or access its files.", color = Muted, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
+                Text("This phone only reads your Hub. It cannot control the desktop or access its files.", color = Muted, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
                 Text("Repair the home address with the saved pairing, or enter the secret again to replace the connection.", color = Accent, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
                 fields("CHECK AND SAVE CONNECTION")
                 OutlinedButton(onClick = onDisconnect, modifier = Modifier.fillMaxWidth()) { Text("DISCONNECT THIS PHONE") }
@@ -173,6 +173,7 @@ internal fun ConnectionScreen(
                 Text("1. Install Tailscale on the desktop and phone, then use the same tailnet.", color = Ink, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
                 Text("2. In the desktop app, open Settings → Multi-device Sync and choose Host Hub.", color = Ink, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
                 Text("3. Type the address that starts with 100. and the shared secret from the desktop app into the fields above. Just the numbers are enough.", color = Ink, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
+                Text("Or, for a Hub published on a server behind an HTTPS reverse proxy, enter its https:// address (for example https://hub.example.com) and the Hub secret. Plain http:// is refused for public addresses.", color = Ink, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
                 Text("The v${BuildConfig.UPSTREAM_VERSION} desktop app does not generate a pairing QR code.", color = Muted, style = MaterialTheme.typography.labelSmall, lineHeight = 16.sp)
             }
             val currentTheme = displayOptions.themeCode?.let(InterfaceTheme::fromCode) ?: InterfaceTheme.Default
@@ -322,8 +323,10 @@ internal fun ConnectionScreen(
                 StatusLine("Desktop baseline", "Token Monitor v${BuildConfig.UPSTREAM_VERSION}")
                 Text("Protocol changes are reviewed against versioned fixtures before this baseline moves forward.", color = Muted, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
             }
-            SettingsGroup("App updates", summary = "${BuildConfig.VERSION_NAME} r${BuildConfig.VERSION_CODE % 1000}") {
-                AppUpdatesPanel(onOpenReleasePage)
+            if (io.github.theminionooo.tokenmonitor.data.update.ReleaseUpdates.enabled) {
+                SettingsGroup("App updates", summary = "${BuildConfig.VERSION_NAME} r${BuildConfig.VERSION_CODE % 1000}") {
+                    AppUpdatesPanel(onOpenReleasePage)
+                }
             }
             Text("The dashboard streams immediately while visible. Widget Live uses a lighter 30-second refresh and stops after one hour.", color = Muted, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
         }
@@ -353,9 +356,9 @@ private fun ColumnScope.ConnectionFields(
         value = hubUrl,
         onValueChange = onHubUrlChange,
         modifier = Modifier.fillMaxWidth(),
-        label = { Text("Tailscale address") },
-        placeholder = { Text("100.x.x.x") },
-        supportingText = { Text("Just the numbers. It always starts with 100. and is shown in the Tailscale app or the desktop's Multi-device Sync list.") },
+        label = { Text("Hub address") },
+        placeholder = { Text("100.x.x.x or https://hub.example.com") },
+        supportingText = { Text("A Tailscale address (starts with 100., shown in the Tailscale app or the desktop's Multi-device Sync list), or a public Hub's https:// address.") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
     )
@@ -386,7 +389,7 @@ private fun ColumnScope.ConnectionFields(
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text("Use Wi-Fi as the main Hub address", color = Ink, style = MaterialTheme.typography.bodyMedium)
-            Text("Allows a private address in the main field. A saved home fallback is enabled separately by entering its address. Public addresses are always rejected.", color = Muted, style = MaterialTheme.typography.bodySmall, lineHeight = 17.sp)
+            Text("Allows a private address in the main field. A saved home fallback is enabled separately by entering its address. Public addresses must use https://.", color = Muted, style = MaterialTheme.typography.bodySmall, lineHeight = 17.sp)
         }
         Spacer(Modifier.width(12.dp))
         Switch(checked = allowLocalNetwork, onCheckedChange = onAllowLocalNetworkChange)
@@ -414,12 +417,16 @@ private fun WelcomeSetup(modifier: Modifier, fields: @Composable ColumnScope.(St
         WelcomeStep(1, "Install Tailscale on the desktop and this phone", "Sign both into the same tailnet. Personal use is free.")
         WelcomeStep(2, "Host the Hub on the desktop", "Token Monitor → Settings → Multi-device Sync → Host Hub.")
         WelcomeStep(3, "Type the address that starts with 100.", "Just the numbers from the desktop's list. Tap Find for the home address, paste the secret, and connect.")
+        Text("Hub on a server behind HTTPS? Enter its https:// address and secret instead; Tailscale is not needed for that route.", color = Muted, style = MaterialTheme.typography.bodySmall, lineHeight = 16.sp)
         Surface(color = Recessed.copy(alpha = 0.76f), border = BorderStroke(1.dp, Line), shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { fields("CONNECT") }
         }
-        Text("Usage stays between this phone and your private Hub. App update checks contact GitHub.", color = Muted, style = MaterialTheme.typography.labelSmall, lineHeight = 15.sp)
-        SettingsGroup("App updates", summary = "${BuildConfig.VERSION_NAME} r${BuildConfig.VERSION_CODE % 1000}") {
-            AppUpdatesPanel(onOpenReleasePage)
+        val updatesEnabled = io.github.theminionooo.tokenmonitor.data.update.ReleaseUpdates.enabled
+        Text(if (updatesEnabled) "Usage stays between this phone and your Hub. App update checks contact GitHub." else "Usage stays between this phone and your Hub.", color = Muted, style = MaterialTheme.typography.labelSmall, lineHeight = 15.sp)
+        if (updatesEnabled) {
+            SettingsGroup("App updates", summary = "${BuildConfig.VERSION_NAME} r${BuildConfig.VERSION_CODE % 1000}") {
+                AppUpdatesPanel(onOpenReleasePage)
+            }
         }
     }
 }

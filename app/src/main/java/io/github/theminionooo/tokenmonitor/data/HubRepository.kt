@@ -233,7 +233,8 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
             is HubAddressValidation.Rejected -> return result.reason
         }
         val fallback = if (rawFallbackUrl.isBlank()) null else {
-            when (val result = HubAddressValidator.validate(rawFallbackUrl, secret, true)) {
+            // The home fallback stays private: a public HTTPS address belongs in the main field only.
+            when (val result = HubAddressValidator.validate(rawFallbackUrl, secret, true, allowPublicHttps = false)) {
                 is HubAddressValidation.Allowed -> result.connection.baseUrl
                 is HubAddressValidation.Rejected -> return "Home Wi-Fi address: ${result.reason}"
             }
@@ -275,7 +276,8 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
             null
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (error: HubApiException) { error.presentation }
-        catch (_: Exception) { "The Hub could not be verified. Check the private address and try again." }
+        catch (error: javax.net.ssl.SSLException) { tlsFailureMessage(error) }
+        catch (_: Exception) { "The Hub could not be verified. Check the address and try again." }
         finally { api.close(); if (activeApi === api) activeApi = null }
     }
 
@@ -377,7 +379,11 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
                         if (generation != token) break
                         val rejected = error is HubApiException && error.statusCode == 401
                         _state.update { it.copy(refreshing = false, streamActive = false, widgetLiveActive = false, secretRejected = rejected,
-                            message = if (error is HubApiException) error.presentation else "Hub unavailable. Showing the last successful snapshot; retrying...") }
+                            message = when (error) {
+                                is HubApiException -> error.presentation
+                                is javax.net.ssl.SSLException -> tlsFailureMessage(error)
+                                else -> "Hub unavailable. Showing the last successful snapshot; retrying..."
+                            }) }
                         if (rejected) break
                         // A dropped stream on a route that just answered is retried there first; only a failed
                         // connection moves the other saved address to the front.
@@ -432,6 +438,13 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
             throw HubApiException(0, LocalNetworkAccess.deniedMessage)
         }
         HubRouteGuard.require(route.baseUrl, PhoneNetworks.read(appContext))
+    }
+
+    /** A public HTTPS Hub is trusted only through the system certificate store; say so when that check fails. */
+    private fun tlsFailureMessage(error: javax.net.ssl.SSLException): String = when (error) {
+        is javax.net.ssl.SSLPeerUnverifiedException -> "The Hub's HTTPS certificate does not match its address, so the secret was not sent."
+        is javax.net.ssl.SSLHandshakeException -> "The Hub's HTTPS certificate is not trusted by this phone, so the secret was not sent."
+        else -> "The secure connection to the Hub failed. Check the HTTPS address and try again."
     }
 
     private fun permittedRoutes(saved: HubConnection, preferred: String?): List<String> {

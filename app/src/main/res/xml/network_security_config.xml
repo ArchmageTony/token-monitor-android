@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Replaces android:usesCleartextTraffic. Cleartext must stay possible for the upstream Tailscale
+  and private Wi-Fi routes, which talk plain HTTP to IP literals; network security config matches
+  host names only and cannot scope cleartext to 100.64/10 or RFC 1918 ranges. Public Hubs are
+  forced onto HTTPS in code instead (HubAddressValidator, HubRouteGuard and HubApiClient).
+
+  HTTPS trusts the system certificate store only: user-installed CAs are not trusted and no
+  certificate pinning is applied, so a reverse proxy's normal certificate rotation keeps working.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
