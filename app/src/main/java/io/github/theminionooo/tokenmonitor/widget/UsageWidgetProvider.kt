@@ -135,9 +135,16 @@ internal fun widgetStats(history: List<HistoryPoint>, date: LocalDate?): List<Pa
 }
 
 class UsageWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = updateAsync(context)
+    override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
+        BackgroundRefreshScheduler.reconcileAsync(context)
+        updateAsync(context)
+    }
     override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, options: Bundle) = updateAsync(context)
-    override fun onDisabled(context: Context) = WidgetUpdateCoordinator.stopLiveIfUnused(context)
+    override fun onEnabled(context: Context) = BackgroundRefreshScheduler.reconcileAsync(context)
+    override fun onDisabled(context: Context) {
+        WidgetUpdateCoordinator.stopLiveIfUnused(context)
+        BackgroundRefreshScheduler.reconcileAsync(context)
+    }
     override fun onDeleted(context: Context, ids: IntArray) { synchronized(frames) { ids.forEach { frames.remove(it) } } }
 
     private fun updateAsync(context: Context) {
@@ -283,13 +290,15 @@ class UsageWidgetProvider : AppWidgetProvider() {
                 enabled && session.connected -> "LIVE"
                 enabled -> "CONNECTING"
                 session.refreshing -> "UPDATING"
+                session.backgroundNote != null -> "STALE"
                 else -> "SAVED"
             }
             views.setTextViewText(R.id.widget_status, when {
                 // Narrow headers have no room for a label beside the toggle; the glowing knob says Live.
-                narrow -> if (status == "SAVED" || status == "LIVE") "" else "…"
+                narrow -> when (status) { "SAVED", "LIVE" -> ""; "STALE" -> "!"; else -> "…" }
                 // Narrow brand headers have no room for the time beside the toggle.
                 status == "SAVED" -> if (size.width < 300) "SAVED" else "SAVED · $savedAt"
+                status == "STALE" -> if (size.width < 300) "STALE" else "STALE · $savedAt"
                 else -> status
             })
             views.setContentDescription(R.id.widget_status, status.lowercase(Locale.getDefault()).replaceFirstChar { it.titlecase(Locale.getDefault()) })
@@ -298,6 +307,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
             val detail = updated + when {
                 enabled -> " · Live until ${clock.format(Instant.ofEpochMilli(session.expiresAt))}"
                 session.note != null -> " · ${session.note}"
+                session.backgroundNote != null -> " · ${session.backgroundNote}"
                 else -> ""
             }
             views.setContentDescription(R.id.widget_header, "Token Monitor. $count tokens. $detail. Open dashboard")

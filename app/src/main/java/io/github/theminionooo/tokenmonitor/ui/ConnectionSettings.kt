@@ -317,6 +317,7 @@ internal fun ConnectionScreen(
                 } else {
                     Text("Long-press your home screen, choose Widgets, then Token Monitor.", color = Ink, style = MaterialTheme.typography.bodySmall)
                 }
+                BackgroundRefreshSettings()
             }
             SettingsGroup("Compatibility", summary = "Desktop v${BuildConfig.UPSTREAM_VERSION}") {
                 StatusLine("Android app", "${BuildConfig.VERSION_NAME} r${BuildConfig.VERSION_CODE % 1000}")
@@ -525,5 +526,43 @@ private fun SettingsOrderRow(
         } else {
             Text("ALWAYS", color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, modifier = Modifier.width(50.dp))
         }
+    }
+}
+
+@Composable
+private fun BackgroundRefreshSettings() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val preferences = remember(context) { io.github.theminionooo.tokenmonitor.data.storage.BackgroundRefreshPreferences(context) }
+    var settings by remember(preferences) { mutableStateOf(preferences.settings) }
+    val record = remember(preferences, settings) { preferences.record }
+    fun apply(next: io.github.theminionooo.tokenmonitor.data.storage.BackgroundRefreshSettings) {
+        preferences.setEnabled(next.enabled)
+        preferences.setInterval(next.interval)
+        settings = next
+        io.github.theminionooo.tokenmonitor.widget.BackgroundRefreshScheduler.reconcileAsync(context)
+    }
+    SettingsToggle(
+        label = "Refresh in the background",
+        description = "While a widget is on your home screen, fetch one snapshot every ${settings.interval.minutes} minutes. Android may run it later while the phone sleeps. No notification is shown.",
+        checked = settings.enabled,
+        onCheckedChange = { apply(settings.copy(enabled = it)) },
+    )
+    if (settings.enabled) {
+        ChoiceGroup(
+            options = io.github.theminionooo.tokenmonitor.data.storage.BackgroundRefreshInterval.entries.map { "${it.minutes} MIN" to it.name },
+            selected = settings.interval.name,
+            onSelect = { name ->
+                io.github.theminionooo.tokenmonitor.data.storage.BackgroundRefreshInterval.entries.firstOrNull { it.name == name }
+                    ?.let { apply(settings.copy(interval = it)) }
+            },
+        )
+        val clock = remember { java.time.format.DateTimeFormatter.ofPattern("MMM d, HH:mm", Locale.getDefault()).withZone(java.time.ZoneId.systemDefault()) }
+        val status = when {
+            record.secretRejected -> "Paused: the Hub rejected the secret. Reconnect to resume."
+            record.lastFailureAt > record.lastSuccessAt -> "Last attempt ${clock.format(java.time.Instant.ofEpochMilli(record.lastFailureAt))} failed: ${record.lastFailureReason ?: "Hub unavailable."}"
+            record.lastSuccessAt > 0 -> "Last background refresh ${clock.format(java.time.Instant.ofEpochMilli(record.lastSuccessAt))}"
+            else -> "No background refresh has run yet."
+        }
+        Text(status, color = if (record.secretRejected || record.lastFailureAt > record.lastSuccessAt) YellowText else Muted, style = MaterialTheme.typography.labelSmall, lineHeight = 15.sp)
     }
 }

@@ -16,6 +16,7 @@ import io.github.theminionooo.tokenmonitor.data.network.prepareHomeAddressRepair
 import io.github.theminionooo.tokenmonitor.data.network.WireHubSnapshot
 import io.github.theminionooo.tokenmonitor.data.protocol.HubProtocolParser
 import io.github.theminionooo.tokenmonitor.data.protocol.HubStreamProtocol
+import io.github.theminionooo.tokenmonitor.data.storage.BackgroundRefreshPreferences
 import io.github.theminionooo.tokenmonitor.data.storage.SecureConnectionStore
 import io.github.theminionooo.tokenmonitor.data.storage.SerialDiskQueue
 import io.github.theminionooo.tokenmonitor.data.storage.SnapshotCache
@@ -31,11 +32,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ensureActive
@@ -43,6 +46,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.coroutineContext
 import io.github.theminionooo.tokenmonitor.data.network.HubNetworkObserver
+import io.github.theminionooo.tokenmonitor.widget.BackgroundRefreshScheduler
 import io.github.theminionooo.tokenmonitor.widget.WidgetUpdateCoordinator
 import kotlinx.serialization.json.JsonObject
 
@@ -126,6 +130,17 @@ internal enum class HubWorkMode { Idle, WidgetPolling, DashboardStreaming }
 
 internal const val WIDGET_POLL_INTERVAL_MS = 30_000L
 
+/** Matches one widget Live refresh period, well inside JobScheduler's own limit. */
+internal const val BACKGROUND_TIMEOUT_MS = 45_000L
+
+/** The result of one background widget refresh. */
+internal sealed interface BackgroundRefreshOutcome {
+    data object Refreshed : BackgroundRefreshOutcome
+    /** Another caller already owns Hub work, or nothing is paired. */
+    data object Skipped : BackgroundRefreshOutcome
+    data class Failed(val reason: String, val secretRejected: Boolean = false) : BackgroundRefreshOutcome
+}
+
 internal fun selectHubWorkMode(
     dashboardVisible: Boolean,
     widgetActive: Boolean,
@@ -142,6 +157,7 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
     private val appContext = context.applicationContext
     private val connectionStore = SecureConnectionStore(appContext)
     private val cache = SnapshotCache(appContext)
+    private val backgroundPreferences = BackgroundRefreshPreferences(appContext)
     private val decodedBodies = DecodedBodies()
     private val backoff = BackoffPolicy()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -273,12 +289,66 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
             connection = candidate
             activeUrl = url
             applySuccess(wire, snapshot)
+            BackgroundRefreshScheduler.reconcileAsync(appContext)
             null
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (error: HubApiException) { error.presentation }
         catch (error: javax.net.ssl.SSLException) { tlsFailureMessage(error) }
         catch (_: Exception) { "The Hub could not be verified. Check the address and try again." }
         finally { api.close(); if (activeApi === api) activeApi = null }
+    }
+
+    /**
+     * Loads one snapshot for the home-screen widgets and saves it like any other success. It never runs
+     * beside Dashboard streaming or widget Live, follows the same route and HTTPS rules, and gives up
+     * after [timeoutMs] by closing its connections, which is what interrupts a blocking read.
+     */
+    suspend fun refreshOnce(timeoutMs: Long = BACKGROUND_TIMEOUT_MS): BackgroundRefreshOutcome = coroutineScope {
+        cacheLoadJob?.join()
+        val saved = connection ?: return@coroutineScope BackgroundRefreshOutcome.Skipped
+        if (workAllowed || foregroundJob?.isActive == true) return@coroutineScope BackgroundRefreshOutcome.Skipped
+        val token = generation
+        fun superseded() = generation != token || workAllowed
+        val api = HubApiClient { route ->
+            if (superseded()) throw CancellationException("Background refresh superseded")
+            requireRouteAllowed(route)
+        }
+        var timedOut = false
+        val watchdog = launch {
+            try {
+                delay(timeoutMs)
+                timedOut = true
+            } finally {
+                api.close()
+            }
+        }
+        try {
+            val (url, wire) = withContext(Dispatchers.IO) {
+                EndpointFailover.run(permittedRoutes(saved, activeUrl)) { api.loadSnapshot(saved.copy(baseUrl = it)) }
+            }
+            if (superseded() || connection !== saved) return@coroutineScope BackgroundRefreshOutcome.Skipped
+            val snapshot = withContext(Dispatchers.IO) { parse(wire) }
+            if (superseded() || connection !== saved) return@coroutineScope BackgroundRefreshOutcome.Skipped
+            activeUrl = url
+            applySuccess(wire, snapshot)?.join()
+            BackgroundRefreshOutcome.Refreshed
+        } catch (cancelled: CancellationException) {
+            when {
+                !isActive -> throw cancelled
+                timedOut -> BackgroundRefreshOutcome.Failed("Timed out waiting for the Hub.")
+                else -> BackgroundRefreshOutcome.Skipped
+            }
+        } catch (error: HubApiException) {
+            if (timedOut) BackgroundRefreshOutcome.Failed("Timed out waiting for the Hub.")
+            else BackgroundRefreshOutcome.Failed(error.presentation, secretRejected = error.statusCode == 401)
+        } catch (error: javax.net.ssl.SSLException) {
+            BackgroundRefreshOutcome.Failed(if (timedOut) "Timed out waiting for the Hub." else tlsFailureMessage(error))
+        } catch (_: Exception) {
+            BackgroundRefreshOutcome.Failed(if (timedOut) "Timed out waiting for the Hub." else "Hub unavailable.")
+        } finally {
+            watchdog.cancel()
+            api.close()
+        }
     }
 
     fun disconnect() {
@@ -290,6 +360,8 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
         pendingCacheWrite = null
         decodedBodies.clear()
         connectionStore.clear()
+        backgroundPreferences.clearRecord()
+        BackgroundRefreshScheduler.reconcileAsync(appContext)
         diskQueue.enqueue { cache.clear(); WidgetUpdateCoordinator.refresh(appContext) }
         _state.value = HubRepositoryState()
     }
@@ -415,13 +487,15 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
         pendingCacheWrite?.let { persist(it, force = true) }
     }
 
-    private fun persist(wire: WireHubSnapshot, force: Boolean) {
+    private fun persist(wire: WireHubSnapshot, force: Boolean): Job? {
         val now = System.currentTimeMillis()
         if (force || now - lastCacheWriteAt >= 60_000L) {
             pendingCacheWrite = null
             lastCacheWriteAt = now
-            diskQueue.enqueue { cache.save(wire); WidgetUpdateCoordinator.refreshSaved(appContext) }
-        } else pendingCacheWrite = wire
+            return diskQueue.enqueue { cache.save(wire); WidgetUpdateCoordinator.refreshSaved(appContext) }
+        }
+        pendingCacheWrite = wire
+        return null
     }
 
     private fun parse(wire: WireHubSnapshot, cached: Boolean = false): HubSnapshot = HubProtocolParser.decodeSnapshot(
@@ -457,15 +531,18 @@ internal class HubRepository(context: Context, loadCache: (SnapshotCache) -> Wir
         }
     }
 
-    private fun applySuccess(wire: WireHubSnapshot, snapshot: HubSnapshot) {
+    private fun applySuccess(wire: WireHubSnapshot, snapshot: HubSnapshot): Job? {
         lastWireSnapshot = wire
-        persist(wire, true)
+        val saved = persist(wire, true)
+        // The Hub accepted the secret again, so background widget refresh may resume.
+        if (backgroundPreferences.clearRejection()) BackgroundRefreshScheduler.reconcileAsync(appContext)
         _state.value = HubRepositoryState(
             hasConnection = connection != null, connectionUrl = connection?.baseUrl,
             fallbackUrl = connection?.fallbackUrl, activeUrl = activeUrl,
             allowLocalNetwork = connection?.allowLocalNetwork ?: false, snapshot = snapshot,
             localNetworkPermissionRequired = needsLocalPermission(),
         )
+        return saved
     }
 
     /** The held update and a newly arrived one never decode at the same time. */

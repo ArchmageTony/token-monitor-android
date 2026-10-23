@@ -15,7 +15,12 @@ import io.github.theminionooo.tokenmonitor.R
 import kotlin.concurrent.thread
 
 class SwipeWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = updateAsync(context, ids)
+    override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
+        BackgroundRefreshScheduler.reconcileAsync(context)
+        updateAsync(context, ids)
+    }
+
+    override fun onEnabled(context: Context) = BackgroundRefreshScheduler.reconcileAsync(context)
 
     override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, options: Bundle) =
         updateAsync(context, intArrayOf(id))
@@ -31,7 +36,10 @@ class SwipeWidgetProvider : AppWidgetProvider() {
 
     override fun onDeleted(context: Context, ids: IntArray) = WidgetDeckPageState.remove(context, ids)
 
-    override fun onDisabled(context: Context) = WidgetUpdateCoordinator.stopLiveIfUnused(context)
+    override fun onDisabled(context: Context) {
+        WidgetUpdateCoordinator.stopLiveIfUnused(context)
+        BackgroundRefreshScheduler.reconcileAsync(context)
+    }
 
     /** Reading the cache, parsing and drawing the card are too slow for the broadcast thread. */
     private fun updateAsync(context: Context, ids: IntArray) {

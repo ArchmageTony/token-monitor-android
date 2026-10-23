@@ -76,7 +76,7 @@ internal fun prepareWidgetDeck(
         liveEnabled && session.connected -> "LIVE"
         liveEnabled -> "CONNECTING"
         session.refreshing -> "UPDATING"
-        stale -> "STALE"
+        stale || (snapshot != null && session.backgroundNote != null) -> "STALE"
         snapshot == null -> "NO DATA"
         else -> "SAVED"
     }
@@ -86,6 +86,7 @@ internal fun prepareWidgetDeck(
         append(status.lowercase(locale).replaceFirstChar { it.titlecase(locale) })
         saved?.let { append(". Snapshot saved at $it") }
         session.note?.let { append(". $it") }
+        session.backgroundNote?.let { append(". $it") }
     }
     val emptyMessage = when {
         liveEnabled -> "Connecting to your Hub…"

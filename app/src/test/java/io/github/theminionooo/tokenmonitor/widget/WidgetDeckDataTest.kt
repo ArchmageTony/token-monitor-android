@@ -55,6 +55,10 @@ class WidgetDeckDataTest {
         val stale = prepareWidgetDeck(snapshot, WidgetSession(), capturedAt + 600_000, ZoneOffset.UTC, Locale.US)
         assertEquals("STALE", stale.status)
 
+        val failed = prepareWidgetDeck(snapshot, WidgetSession(backgroundNote = "Auto refresh failed 10:00"), capturedAt + 60_000, ZoneOffset.UTC, Locale.US)
+        assertEquals("STALE", failed.status)
+        assertTrue(failed.statusDescription.contains("Auto refresh failed 10:00"))
+
         val offline = prepareWidgetDeck(snapshot, WidgetSession(note = "Hub offline · retrying"), capturedAt + 60_000, ZoneOffset.UTC, Locale.US)
         assertEquals("OFFLINE", offline.status)
         assertTrue(offline.statusDescription.contains("Hub offline"))
