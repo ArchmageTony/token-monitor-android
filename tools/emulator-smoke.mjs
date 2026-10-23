@@ -6,6 +6,8 @@ import { setTimeout } from "node:timers/promises";
 
 // Must match applicationId in app/build.gradle.kts (this fork installs beside the upstream app).
 const packageName = "io.github.at.tokenmonitor";
+// The activity keeps the unchanged Kotlin namespace, so its class name is not relative to the package.
+const mainActivity = `${packageName}/io.github.theminionooo.tokenmonitor.MainActivity`;
 const serial = process.env.ANDROID_SERIAL || "emulator-5554";
 assert.match(serial, /^emulator-\d+$/, "Smoke checks may only target a disposable emulator");
 const apk = process.argv[2];
@@ -21,13 +23,13 @@ try {
     // API 26 can reject log clearing immediately after install. Read this run's logs instead.
     logSince = `${adb("shell", "date", "+%s").trim()}.000`;
     assert.match(logSince, /^\d+\.000$/);
-    const launch = adb("shell", "am", "start", "-W", "-n", `${packageName}/.MainActivity`);
+    const launch = adb("shell", "am", "start", "-W", "-n", mainActivity);
     await writeFile(`${output}/launch.txt`, launch);
     assert.match(launch, /Status: ok/);
     await setTimeout(3000);
     assert.match(adb("shell", "pidof", packageName).trim(), /^\d+( \d+)*$/, "Optimized app exited after launch");
     adb("shell", "input", "keyevent", "KEYCODE_HOME");
-    assert.match(adb("shell", "am", "start", "-W", "-n", `${packageName}/.MainActivity`), /Status: ok/);
+    assert.match(adb("shell", "am", "start", "-W", "-n", mainActivity), /Status: ok/);
     await setTimeout(1000);
     assert.ok(adb("shell", "pidof", packageName).trim(), "Optimized app exited after resume");
     const logs = runtimeLogs();
