@@ -1,0 +1,110 @@
+name: Fork release
+
+# Builds and signs this fork's APK with the fork's own release key, verifies the package, version and
+# signer, and creates a DRAFT GitHub Release. Nothing is published automatically: publish the draft by
+# hand after testing it on a phone. See docs/RELEASING.md, "Fork releases".
+#
+# - Push a tag `android-v<version>-r5NN` (matching fork.properties) to draft that commit. Its pull request
+#   or main checks must already have passed.
+# - Or run it by hand: dry_run (default) signs and uploads a 7-day artifact from any branch without
+#   creating a release; dry_run=false drafts a release from main.
+on:
+  push:
+    tags: ['android-v*-r[5-9][0-9][0-9]']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Sign and upload an artifact only; do not create a draft release
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: fork-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # Mirror of the upstream-only guard on release.yml: this runs only in forks that configured their own
+    # release certificate (Actions variable RELEASE_CERT_SHA256); everywhere else it is skipped quietly.
+    if: github.repository != 'The-Minion-oOo/token-monitor-android' && vars.RELEASE_CERT_SHA256 != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DRAFT: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+      TAG_PUSH: ${{ github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+      - name: Check fork release metadata
+        run: node tools/fork-release.mjs check
+      - name: Require a new tag and passing checks on this exact commit
+        id: preflight
+        if: env.DRAFT == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node tools/fork-release.mjs preflight ${{ env.TAG_PUSH == 'true' && '--tag-push' || '' }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+        with:
+          cache-read-only: true
+      - name: Restore release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/token-monitor-release.p12"
+      - name: Test and build signed APK
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/token-monitor-release.p12
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          TOKEN_MONITOR_RELEASE_CERT_SHA256: ${{ vars.RELEASE_CERT_SHA256 }}
+        run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleRelease --no-daemon --console=plain
+      - name: Verify package, version and signer, and prepare release assets
+        id: metadata
+        env:
+          RELEASE_CERT_SHA256: ${{ vars.RELEASE_CERT_SHA256 }}
+          RELEASE_SOURCE: ${{ steps.preflight.outputs.source }}
+        run: node tools/fork-release.mjs prepare --apk app/build/outputs/apk/release/app-release.apk --out build/fork-release
+      - name: Upload dry-run artifact
+        if: env.DRAFT != 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: token-monitor-fork-release
+          path: build/fork-release/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Recheck the tag and checks before creating the draft
+        if: env.DRAFT == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node tools/fork-release.mjs preflight ${{ env.TAG_PUSH == 'true' && '--tag-push' || '' }}
+      - name: Create draft GitHub release
+        if: env.DRAFT == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          RELEASE_APK: ${{ steps.metadata.outputs.apk }}
+          RELEASE_MANIFEST: ${{ steps.metadata.outputs.manifest }}
+          RELEASE_TITLE: ${{ steps.metadata.outputs.title }}
+          RELEASE_NOTES: ${{ steps.metadata.outputs.notes }}
+        run: >-
+          gh release create "$RELEASE_TAG" "$RELEASE_APK" "$RELEASE_APK.sha256"
+          "$RELEASE_MANIFEST" --target "$GITHUB_SHA" --title "$RELEASE_TITLE"
+          --notes-file "$RELEASE_NOTES" --draft
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/token-monitor-release.p12"
