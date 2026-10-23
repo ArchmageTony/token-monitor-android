@@ -134,3 +134,40 @@ URL; `tools/check-docs.mjs` enforces this. Link to Install and update
 Batch related work and publish when the APK is worth reinstalling. Documentation,
 marketing-image placement, and other non-app changes do not need a new Android
 revision.
+
+## Fork releases
+
+A fork keeps upstream's package history apart from its own:
+
+- `fork.properties` holds `tokenMonitorForkRevision` (1–499). The build turns it
+  into revision 500 + n, so upstream v0.77.0 r2 (770002) becomes fork r501
+  (770501), tag `android-v0.77.0-r501`. Bump the fork revision for every fork
+  release; a new desktop baseline starts again at 1.
+- The updater repository comes from `GITHUB_REPOSITORY` in CI or
+  `-PtokenMonitorUpdateRepository=owner/name` locally. The pinned certificate
+  comes from `TOKEN_MONITOR_RELEASE_CERT_SHA256` or
+  `-PtokenMonitorReleaseCertSha256`. Without a certificate the release build has
+  no updater. Neither value is written into source.
+- `node tools/fork-release.mjs check` replaces `check-release.mjs` in fork CI.
+  It needs `docs/releases/<tag>.md`.
+
+Secrets and variables in the fork repository:
+
+| Name | Kind | Holds |
+| --- | --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | secret | PKCS12 keystore, base64 |
+| `ANDROID_KEYSTORE_PASSWORD` | secret | store password |
+| `ANDROID_KEY_PASSWORD` | secret | key password |
+| `ANDROID_KEY_ALIAS` | secret | key alias |
+| `RELEASE_CERT_SHA256` | variable | SHA-256 of the signing certificate, lowercase hex |
+
+`.github/workflows/fork-release.yml` builds, tests, signs and verifies the APK,
+then creates a **draft** GitHub release with the APK, its `.sha256` and
+`token-monitor-android-update.json`. Publish the draft by hand after checking it.
+It runs when a tag matching `android-v*-r5xx`–`r9xx` is pushed, or from
+**Actions → Fork release** on the default branch (dry run by default). Before
+the fork's branch is merged, only the tag push can start it; the notes then say
+that the build came from an unmerged commit.
+
+Keep an offline copy of the keystore, both passwords and the alias. A lost key
+means users must uninstall and reinstall to move to a new one.

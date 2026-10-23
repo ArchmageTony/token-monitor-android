@@ -62,7 +62,22 @@ reverse proxy, for example `https://hub.example.com`.
 - The Hub secret also authorizes writes on the Hub. Use a long random secret,
   keep the Hub bound to loopback behind the proxy, and rotate the secret on the
   Hub and every desktop if the phone is lost.
-- The in-app updater is disabled in this fork; it does not contact GitHub.
+- The in-app updater in fork release builds checks only the fork's own GitHub
+  Releases and accepts only APKs signed with the fork's release certificate.
+  Debug builds have no updater.
+
+### Background widget refresh (fork)
+
+While at least one widget is placed, a saved pairing exists and the user has not
+switched it off, one periodic JobScheduler job (15, 30 or 60 minutes, default 30,
+any network) loads one Hub snapshot with the same five read-only `GET` requests
+and the same route and HTTPS checks as a manual Refresh. It shows no
+notification, holds no wake lock of its own and gives up after 45 seconds. It
+skips its turn while widget Live, a widget Refresh or the dashboard is active. A
+rejected secret stops the schedule until the pairing is saved again or the Hub
+accepts the secret in the foreground. A failure keeps the saved snapshot on the
+widget, marked as stale. `RECEIVE_BOOT_COMPLETED` is held only so JobScheduler
+can keep the job across a reboot; the app registers no boot receiver.
 
 ## Local storage
 
@@ -100,8 +115,8 @@ The Status view separately reads public service-health endpoints for Claude,
 OpenAI, Cursor, and DeepSeek. Those requests do not include Hub credentials
 or Token Monitor usage data.
 
-In this fork the updater is disabled (`BuildConfig.UPDATES_ENABLED = false`) and
-the panel is hidden; the rest of this paragraph describes upstream builds.
+In this fork, release builds check the fork's own repository and pinned fork
+certificate, both fixed at build time; debug builds hide the panel.
 Opening App updates checks this app's latest published GitHub release. A
 download starts only after the user taps Download and install. These HTTPS
 requests do not include the Hub secret or usage data. Before handing the APK to
@@ -114,8 +129,9 @@ A user-started dataSync foreground service supports widget Live for one hour wit
 a 30-second refresh cadence, or a single refresh for up to 45 seconds. It shares
 the dashboard repository, requests notification permission to expose Stop, and
 stops without restarting after expiry, removal of the last widget, or a process
-kill. There is no wake lock, scheduled worker, boot receiver, analytics SDK, or
-advertising SDK.
+kill. There is no wake lock, boot receiver, analytics SDK, or advertising SDK.
+The only scheduled work is the fork's optional periodic widget refresh described
+above.
 
 `ACCESS_NETWORK_STATE` lets an active dashboard or widget session reconnect after a route changes.
 On Android 17 and newer, `ACCESS_LOCAL_NETWORK` is requested for a chosen LAN
