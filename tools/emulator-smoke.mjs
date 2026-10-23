@@ -4,7 +4,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 
-const packageName = "io.github.theminionooo.tokenmonitor";
+// Must match applicationId in app/build.gradle.kts (this fork installs beside the upstream app).
+const packageName = "io.github.at.tokenmonitor";
 const serial = process.env.ANDROID_SERIAL || "emulator-5554";
 assert.match(serial, /^emulator-\d+$/, "Smoke checks may only target a disposable emulator");
 const apk = process.argv[2];

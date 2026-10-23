@@ -7,8 +7,13 @@ class ProjectFoundationTest {
     @Test
     fun applicationIdRemainsStable() {
         assertEquals(
-            "io.github.theminionooo.tokenmonitor",
+            "io.github.at.tokenmonitor",
             BuildConfig.APPLICATION_ID.removeSuffix(".preview"),
         )
+    }
+
+    @Test
+    fun upstreamUpdaterIsDisabledInThisFork() {
+        assertEquals(false, BuildConfig.UPDATES_ENABLED)
     }
 }

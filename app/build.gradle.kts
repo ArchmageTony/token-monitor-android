@@ -22,7 +22,8 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.theminionooo.tokenmonitor"
+        // Fork identity: installs beside the upstream app. The Kotlin namespace above is unchanged to keep upstream merges small.
+        applicationId = "io.github.at.tokenmonitor"
         minSdk = 26
         targetSdk = 37
         versionCode = appVersionCode
@@ -31,6 +32,10 @@ android {
         buildConfigField("String", "UPSTREAM_VERSION", "\"$upstreamVersion\"")
         buildConfigField("String", "UPSTREAM_TAG", "\"$upstreamTag\"")
         buildConfigField("String", "UPSTREAM_COMMIT", "\"$upstreamCommit\"")
+        // The in-app updater is pinned to the upstream repository, package and signing certificate, so it is
+        // off in this fork. TODO: to update from this fork's own releases, set UPDATES_ENABLED and point
+        // ReleaseUpdates (repository, package name, release certificate) and release.json at the fork.
+        buildConfigField("boolean", "UPDATES_ENABLED", "false")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

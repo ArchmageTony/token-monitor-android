@@ -49,7 +49,16 @@ internal sealed interface UpdateCheck {
 }
 
 internal object ReleaseUpdates {
+    /**
+     * False in this fork: the constants above name the upstream repository, package and signing
+     * certificate, which this build can neither match nor install over. Nothing is checked,
+     * downloaded or installed while this is false, and Settings hides the App updates panel.
+     */
+    val enabled: Boolean get() = BuildConfig.UPDATES_ENABLED
+    const val disabledMessage = "App updates are disabled in this build."
+
     suspend fun check(installedName: String, installedCode: Int): UpdateCheck = withContext(Dispatchers.IO) {
+        if (!enabled) error(disabledMessage)
         val release = Json.parseToJsonElement(
             readText("https://api.github.com/repos/$repository/releases/latest", 512 * 1024),
         ).jsonObject
@@ -64,6 +73,7 @@ internal object ReleaseUpdates {
     }
 
     suspend fun download(context: Context, release: AppRelease): File = withContext(Dispatchers.IO) {
+        if (!enabled) error(disabledMessage)
         val directory = File(context.cacheDir, "updates").apply { mkdirs() }
         val ready = File(directory, "token-monitor-update.apk")
         if (ready.isFile && ready.length() == release.sizeBytes && digest(ready) == release.sha256) {
@@ -109,6 +119,7 @@ internal object ReleaseUpdates {
     }
 
     suspend fun install(context: Context, file: File, release: AppRelease): Boolean {
+        if (!enabled) error(disabledMessage)
         if (!context.packageManager.canRequestPackageInstalls()) {
             context.startActivity(
                 Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")),

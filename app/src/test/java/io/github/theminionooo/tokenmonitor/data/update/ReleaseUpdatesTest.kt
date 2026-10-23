@@ -11,6 +11,14 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class ReleaseUpdatesTest {
+    @Test fun upstreamUpdatesAreNotCheckedInThisFork() {
+        assertEquals(false, ReleaseUpdates.enabled)
+        val error = assertThrows(IllegalStateException::class.java) {
+            kotlinx.coroutines.runBlocking { ReleaseUpdates.check("v0.0.0", 1) }
+        }
+        assertEquals(ReleaseUpdates.disabledMessage, error.message)
+    }
+
     @Test fun comparesDesktopVersionsAndAndroidRevisions() {
         assertEquals(1, ReleaseUpdates.compareTags("android-v0.61.0-r1", "android-v0.60.0-r7"))
         assertEquals(1, ReleaseUpdates.compareTags("android-v0.62.0-r1", "android-v0.61.0-r2"))
