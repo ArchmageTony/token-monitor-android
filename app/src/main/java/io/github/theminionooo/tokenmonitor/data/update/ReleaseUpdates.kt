@@ -21,13 +21,34 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-private const val repository = "The-Minion-oOo/token-monitor-android"
-private const val packageName = "io.github.theminionooo.tokenmonitor"
 private const val manifestAsset = "token-monitor-android-update.json"
-private const val releaseCertificate = "eed5a820371ac158c038e5a55243b2e4e7f10ffdf764963b2808d152d3821c2c"
+private const val upstreamRepository = "The-Minion-oOo/token-monitor-android"
 private const val maxApkBytes = 100L * 1024 * 1024
 private val releaseTag = Regex("android-v(\\d+)\\.(\\d+)\\.(\\d+)-r(\\d+)")
 private val sha256Pattern = Regex("[a-f0-9]{64}")
+private val repositoryPattern = Regex("[A-Za-z0-9-]+/[A-Za-z0-9._-]+")
+
+/**
+ * Where updates come from and who must have signed them. Built from BuildConfig, which the release build
+ * fills from the fork's GitHub repository and its release certificate; nothing here names an account.
+ */
+internal data class UpdateIdentity(val repository: String, val packageName: String, val certificateSha256: String) {
+    companion object {
+        fun of(repository: String, packageName: String, certificateSha256: String): UpdateIdentity? = when {
+            !repositoryPattern.matches(repository) || repository.equals(upstreamRepository, ignoreCase = true) -> null
+            packageName.isBlank() || !sha256Pattern.matches(certificateSha256) -> null
+            else -> UpdateIdentity(repository, packageName, certificateSha256)
+        }
+
+        val current: UpdateIdentity? by lazy {
+            if (!BuildConfig.UPDATES_ENABLED) null
+            else of(BuildConfig.UPDATE_REPOSITORY, BuildConfig.APPLICATION_ID, BuildConfig.UPDATE_CERT_SHA256)
+        }
+    }
+}
+
+/** This build's GitHub Releases page, or null when the build has no update source. */
+internal val androidReleasesUrl: String? get() = UpdateIdentity.current?.let { "https://github.com/${it.repository}/releases" }
 
 internal data class AppRelease(
     val tag: String,
@@ -50,15 +71,18 @@ internal sealed interface UpdateCheck {
 
 internal object ReleaseUpdates {
     /**
-     * False in this fork: the constants above name the upstream repository, package and signing
-     * certificate, which this build can neither match nor install over. Nothing is checked,
-     * downloaded or installed while this is false, and Settings hides the App updates panel.
+     * True only in a release build that was given this fork's repository and release certificate. Debug
+     * builds and unconfigured release builds check, download and install nothing, and Settings hides the
+     * App updates panel.
      */
-    val enabled: Boolean get() = BuildConfig.UPDATES_ENABLED
+    val enabled: Boolean get() = UpdateIdentity.current != null
     const val disabledMessage = "App updates are disabled in this build."
 
+    private fun identity(): UpdateIdentity = UpdateIdentity.current ?: error(disabledMessage)
+
     suspend fun check(installedName: String, installedCode: Int): UpdateCheck = withContext(Dispatchers.IO) {
-        if (!enabled) error(disabledMessage)
+        val identity = identity()
+        val repository = identity.repository
         val release = Json.parseToJsonElement(
             readText("https://api.github.com/repos/$repository/releases/latest", 512 * 1024),
         ).jsonObject
@@ -66,18 +90,18 @@ internal object ReleaseUpdates {
         val current = "android-$installedName-r${installedCode % 1000}"
         if (compareTags(tag, current) <= 0) return@withContext UpdateCheck.Current(tag)
 
-        val metadataUrl = assetUrl(release, manifestAsset)
+        val metadataUrl = assetUrl(identity, release, manifestAsset)
             ?: return@withContext UpdateCheck.BrowserOnly(tag)
         val metadata = Json.parseToJsonElement(readText(metadataUrl, 32 * 1024)).jsonObject
-        UpdateCheck.Available(parseManifest(release, metadata, installedCode))
+        UpdateCheck.Available(parseManifest(identity, release, metadata, installedCode))
     }
 
     suspend fun download(context: Context, release: AppRelease): File = withContext(Dispatchers.IO) {
-        if (!enabled) error(disabledMessage)
+        val identity = identity()
         val directory = File(context.cacheDir, "updates").apply { mkdirs() }
         val ready = File(directory, "token-monitor-update.apk")
         if (ready.isFile && ready.length() == release.sizeBytes && digest(ready) == release.sha256) {
-            validateApk(context, ready, release)
+            validateApk(context, identity, ready, release)
             return@withContext ready
         }
         val temporary = File(directory, "token-monitor-update.apk.part")
@@ -106,7 +130,7 @@ internal object ReleaseUpdates {
                 if (count != release.sizeBytes || digest(temporary) != release.sha256) {
                     error("The APK did not match its release checksum.")
                 }
-                validateApk(context, temporary, release)
+                validateApk(context, identity, temporary, release)
                 if (ready.exists()) ready.delete()
                 if (!temporary.renameTo(ready)) error("Could not finish the APK download.")
                 ready
@@ -119,7 +143,7 @@ internal object ReleaseUpdates {
     }
 
     suspend fun install(context: Context, file: File, release: AppRelease): Boolean {
-        if (!enabled) error(disabledMessage)
+        val identity = identity()
         if (!context.packageManager.canRequestPackageInstalls()) {
             context.startActivity(
                 Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")),
@@ -127,7 +151,7 @@ internal object ReleaseUpdates {
             return false
         }
         // Parsing the archive and checking its signature is slow; still the last step before the intent, on the same file.
-        withContext(Dispatchers.IO) { validateApk(context, file, release) }
+        withContext(Dispatchers.IO) { validateApk(context, identity, file, release) }
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.updates", file)
         context.startActivity(
             Intent(Intent.ACTION_VIEW).apply {
@@ -146,12 +170,12 @@ internal object ReleaseUpdates {
         return a.zip(b).firstNotNullOfOrNull { (x, y) -> x.compareTo(y).takeIf { it != 0 } } ?: 0
     }
 
-    internal fun parseManifest(release: JsonObject, manifest: JsonObject, installedCode: Int): AppRelease {
+    internal fun parseManifest(identity: UpdateIdentity, release: JsonObject, manifest: JsonObject, installedCode: Int): AppRelease {
         val tag = release.string("tag_name")
         require(releaseTag.matches(tag) && release.boolean("draft") == false && release.boolean("prerelease") == false) {
             "This is not a published Android release."
         }
-        require(manifest.int("schemaVersion") == 1 && manifest.string("packageName") == packageName && manifest.string("tag") == tag) {
+        require(manifest.int("schemaVersion") == 1 && manifest.string("packageName") == identity.packageName && manifest.string("tag") == tag) {
             "The update details do not match the release."
         }
         val versionCode = manifest.int("versionCode")
@@ -163,14 +187,14 @@ internal object ReleaseUpdates {
         require(apkName == "token-monitor-android-${tag.removePrefix("android-")}.apk") {
             "Unexpected update file name."
         }
-        val apkUrl = assetUrl(release, apkName) ?: error("The release APK is missing.")
+        val apkUrl = assetUrl(identity, release, apkName) ?: error("The release APK is missing.")
         val size = manifest.long("sizeBytes")
         val digest = manifest.string("sha256")
         require(size in 1..maxApkBytes && sha256Pattern.matches(digest)) {
             "The update checksum or size is invalid."
         }
         val pageUrl = release.string("html_url")
-        require(pageUrl == "https://github.com/$repository/releases/tag/$tag") {
+        require(pageUrl == "https://github.com/${identity.repository}/releases/tag/$tag") {
             "Unexpected release page."
         }
         return AppRelease(
@@ -187,14 +211,24 @@ internal object ReleaseUpdates {
         )
     }
 
-    private fun assetUrl(release: JsonObject, name: String): String? = release["assets"]?.jsonArray
+    private fun assetUrl(identity: UpdateIdentity, release: JsonObject, name: String): String? = release["assets"]?.jsonArray
         ?.map { it.jsonObject }
         ?.singleOrNull { it.string("name") == name }
         ?.string("browser_download_url")
-        ?.takeIf { it == "https://github.com/$repository/releases/download/${release.string("tag_name")}/$name" }
+        ?.takeIf { it == "https://github.com/${identity.repository}/releases/download/${release.string("tag_name")}/$name" }
+
+    /**
+     * The downloaded APK must have exactly one signer, equal to the configured release certificate and to the
+     * installed app's own signer. Android requires the latter for an in-place update anyway; checking it here
+     * gives a clear message instead of the system installer's "conflicts with an existing package".
+     */
+    internal fun signerAccepted(identity: UpdateIdentity, archiveSigners: List<String>, installedSigners: List<String>): Boolean =
+        archiveSigners.size == 1 && archiveSigners.single() == identity.certificateSha256 &&
+            installedSigners.size == 1 && installedSigners.single() == identity.certificateSha256
 
     @Suppress("DEPRECATION")
-    private fun validateApk(context: Context, file: File, release: AppRelease) {
+    private fun validateApk(context: Context, identity: UpdateIdentity, file: File, release: AppRelease) {
+        val packageName = identity.packageName
         require(context.packageName == packageName) { "Preview builds cannot update the installed app." }
         val flags = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
         val info = context.packageManager.getPackageArchiveInfo(file.absolutePath, flags)
@@ -203,8 +237,13 @@ internal object ReleaseUpdates {
             (if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()) == release.versionCode.toLong()
         ) { "The APK package or version does not match the release." }
         val signatures = if (Build.VERSION.SDK_INT >= 28) info.signingInfo?.apkContentsSigners else info.signatures
-        require(signatures?.size == 1 && signatures.single().toByteArray().sha256() == releaseCertificate) {
-            "The APK is not signed with the Token Monitor release key."
+        val installed = context.packageManager.getPackageInfo(context.packageName, flags)
+        val installedSignatures = if (Build.VERSION.SDK_INT >= 28) installed.signingInfo?.apkContentsSigners else installed.signatures
+        require(signatures?.size == 1 && signatures.single().toByteArray().sha256() == identity.certificateSha256) {
+            "The APK is not signed with this app's release key."
+        }
+        require(signerAccepted(identity, signatures.map { it.toByteArray().sha256() }, installedSignatures.orEmpty().map { it.toByteArray().sha256() })) {
+            "This installed copy is signed with a different key, so Android cannot update it in place. Uninstall it once and install the release APK."
         }
     }
 

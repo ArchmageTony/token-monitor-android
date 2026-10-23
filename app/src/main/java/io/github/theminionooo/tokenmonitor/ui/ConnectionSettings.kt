@@ -319,7 +319,7 @@ internal fun ConnectionScreen(
                 }
             }
             SettingsGroup("Compatibility", summary = "Desktop v${BuildConfig.UPSTREAM_VERSION}") {
-                StatusLine("Android app", BuildConfig.VERSION_NAME)
+                StatusLine("Android app", "${BuildConfig.VERSION_NAME} r${BuildConfig.VERSION_CODE % 1000}")
                 StatusLine("Desktop baseline", "Token Monitor v${BuildConfig.UPSTREAM_VERSION}")
                 Text("Protocol changes are reviewed against versioned fixtures before this baseline moves forward.", color = Muted, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
             }
