@@ -178,7 +178,11 @@ plus transparent native touch targets for Previous, Next, Open, Refresh, and
 Live. It requests 4×2 but never switches composition when a launcher allocates a
 different physical size. The selected page is stored locally per widget. This
 avoids launcher collection transforms and keeps page changes local without fetching.
-Neither provider registers a periodic update.
+Neither provider registers a launcher `updatePeriodMillis`. In this fork,
+`BackgroundRefreshScheduler` keeps one periodic JobScheduler job while a widget is
+placed, a pairing is saved and the setting is on; `BackgroundRefreshJobService`
+calls `HubRepository.refreshOnce()`, which skips while foreground work owns the
+repository and saves its result through the same disk queue.
 See [Android widget layouts](https://developer.android.com/develop/ui/views/appwidgets/layouts).
 
 ## Presentation

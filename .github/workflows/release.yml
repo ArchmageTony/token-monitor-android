@@ -13,6 +13,9 @@ concurrency:
 
 jobs:
   release:
+    # Fork guard: release tooling verifies the upstream package and signing certificate and needs the
+    # upstream signing secrets, so this job only runs in the upstream repository. Forks skip it quietly.
+    if: github.repository == 'The-Minion-oOo/token-monitor-android'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

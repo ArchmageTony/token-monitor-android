@@ -5,11 +5,17 @@ import android.content.Context
 import android.content.res.Configuration
 import android.util.SizeF
 import io.github.theminionooo.tokenmonitor.data.protocol.HubProtocolParser
+import io.github.theminionooo.tokenmonitor.data.storage.BackgroundRefreshPreferences
+import io.github.theminionooo.tokenmonitor.data.storage.BackgroundRefreshRecord
 import io.github.theminionooo.tokenmonitor.data.storage.DisplayPreferences
 import io.github.theminionooo.tokenmonitor.data.storage.SnapshotCache
 import io.github.theminionooo.tokenmonitor.domain.HubSnapshot
 import io.github.theminionooo.tokenmonitor.ui.InterfaceTheme
 import io.github.theminionooo.tokenmonitor.ui.resolveInterfaceTheme
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 internal data class WidgetDeckRenderState(
     val data: WidgetDeckData,
@@ -37,7 +43,29 @@ internal fun loadWidgetSnapshot(context: Context): WidgetSnapshot {
         }.getOrNull()
     }
     val snapshot: HubSnapshot? = listOfNotNull(session.snapshot, cached).maxByOrNull { it.capturedAt }
-    return WidgetSnapshot(session, snapshot)
+    val note = if (session.enabled || session.refreshing || session.note != null) null else runCatching {
+        val preferences = BackgroundRefreshPreferences(context)
+        widgetBackgroundNote(preferences.settings.enabled, preferences.record, snapshot?.capturedAt)
+    }.getOrNull()
+    return WidgetSnapshot(if (note == null) session else session.copy(backgroundNote = note), snapshot)
+}
+
+/**
+ * A short line for a widget whose saved numbers the background refresh could not replace. A failure older
+ * than the saved snapshot is history, not news, and a switched-off refresh never reports anything.
+ */
+internal fun widgetBackgroundNote(
+    enabled: Boolean,
+    record: BackgroundRefreshRecord,
+    snapshotCapturedAt: Long?,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+    locale: Locale = Locale.getDefault(),
+): String? = when {
+    !enabled -> null
+    record.secretRejected -> "Hub rejected the secret. Open Token Monitor"
+    record.lastFailureAt > 0 && record.lastFailureAt > (snapshotCapturedAt ?: 0L) ->
+        "Auto refresh failed ${DateTimeFormatter.ofPattern("HH:mm", locale).withZone(zoneId).format(Instant.ofEpochMilli(record.lastFailureAt))}"
+    else -> null
 }
 
 internal fun loadWidgetDeck(context: Context, widgetId: Int): WidgetDeckRenderState =

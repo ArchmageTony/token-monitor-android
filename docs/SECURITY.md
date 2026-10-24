@@ -3,8 +3,10 @@
 ## Network boundary
 
 The app accepts Tailscale addresses by default. Private LAN addresses require an
-explicit setting. Public targets are rejected to keep transport private and
-prevent Hub credentials from being sent to arbitrary internet hosts.
+explicit setting. Upstream rejects every public target; this fork accepts a
+public target only as an `https://` domain name (see
+[Public HTTPS route (fork)](#public-https-route-fork)), so Hub credentials are
+never sent to an internet host without TLS.
 
 [Tailscale](https://tailscale.com/docs/reference/connection-types) normally
 attempts a direct device-to-device connection and can fall back to an
@@ -31,6 +33,51 @@ The desktop Hub secret is sent as a bearer credential only to the validated Hub 
 The unauthenticated health response must identify a Token Monitor Hub before the
 first protected request is sent. HTTP redirects are rejected so an authenticated
 request cannot move the bearer secret to another host.
+
+## Public HTTPS route (fork)
+
+This fork adds a third route for a Hub published on a server behind an HTTPS
+reverse proxy, for example `https://hub.example.com`.
+
+- Only `https://` is accepted for a public host. A bare name such as
+  `hub.example.com` becomes `https://hub.example.com`; the port defaults to 443,
+  not the desktop Hub's 17321. `http://` public addresses are rejected when
+  saved, and again before every request (route guard and HTTP client), so a
+  tampered or stale record cannot send the secret in plain text.
+- The host must be a public DNS name: IP literals, single-label names,
+  `localhost`, and private-use suffixes such as `.local`, `.internal`, `.lan`
+  and `.home.arpa` are refused. Credentials, query strings (for example
+  `?secret=`) and paths are refused as for the other routes.
+- TLS uses Android's system trust store only; user-installed CAs are not
+  trusted and no certificate pinning is applied, so the proxy's normal
+  certificate renewal keeps working. Certificate and hostname failures stop the
+  request before the secret is sent and are reported as such.
+- The public route is usable on any network, including mobile data. The
+  optional home Wi-Fi fallback must still be a private address and is preferred
+  while it answers.
+- Cleartext stays enabled in the network security config only because the
+  Tailscale and LAN routes use plain HTTP to IP literals, which the config
+  cannot scope by address range. The HTTPS requirement for public hosts is
+  enforced in code and covered by unit tests.
+- The Hub secret also authorizes writes on the Hub. Use a long random secret,
+  keep the Hub bound to loopback behind the proxy, and rotate the secret on the
+  Hub and every desktop if the phone is lost.
+- The in-app updater in fork release builds checks only the fork's own GitHub
+  Releases and accepts only APKs signed with the fork's release certificate.
+  Debug builds have no updater.
+
+### Background widget refresh (fork)
+
+While at least one widget is placed, a saved pairing exists and the user has not
+switched it off, one periodic JobScheduler job (15, 30 or 60 minutes, default 30,
+any network) loads one Hub snapshot with the same five read-only `GET` requests
+and the same route and HTTPS checks as a manual Refresh. It shows no
+notification, holds no wake lock of its own and gives up after 45 seconds. It
+skips its turn while widget Live, a widget Refresh or the dashboard is active. A
+rejected secret stops the schedule until the pairing is saved again or the Hub
+accepts the secret in the foreground. A failure keeps the saved snapshot on the
+widget, marked as stale. `RECEIVE_BOOT_COMPLETED` is held only so JobScheduler
+can keep the job across a reboot; the app registers no boot receiver.
 
 ## Local storage
 
@@ -68,6 +115,8 @@ The Status view separately reads public service-health endpoints for Claude,
 OpenAI, Cursor, and DeepSeek. Those requests do not include Hub credentials
 or Token Monitor usage data.
 
+In this fork, release builds check the fork's own repository and pinned fork
+certificate, both fixed at build time; debug builds hide the panel.
 Opening App updates checks this app's latest published GitHub release. A
 download starts only after the user taps Download and install. These HTTPS
 requests do not include the Hub secret or usage data. Before handing the APK to
@@ -80,8 +129,9 @@ A user-started dataSync foreground service supports widget Live for one hour wit
 a 30-second refresh cadence, or a single refresh for up to 45 seconds. It shares
 the dashboard repository, requests notification permission to expose Stop, and
 stops without restarting after expiry, removal of the last widget, or a process
-kill. There is no wake lock, scheduled worker, boot receiver, analytics SDK, or
-advertising SDK.
+kill. There is no wake lock, boot receiver, analytics SDK, or advertising SDK.
+The only scheduled work is the fork's optional periodic widget refresh described
+above.
 
 `ACCESS_NETWORK_STATE` lets an active dashboard or widget session reconnect after a route changes.
 On Android 17 and newer, `ACCESS_LOCAL_NETWORK` is requested for a chosen LAN

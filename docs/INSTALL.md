@@ -92,3 +92,11 @@ After updating, open the dashboard once to verify the saved connection. The
 original Usage widget remains resizable; the four-page Pages widget keeps one
 fixed 1.82:1 composition. Widget Live is an explicit session and may need to be
 started again.
+
+## Fork builds
+
+Fork release APKs use application ID `io.github.at.tokenmonitor`, the fork's own
+signing key, and version codes with revision 501 or higher. Android refuses to
+update an app signed with a different key, so if a debug build of the fork is
+installed, uninstall it once before installing the first fork release, then pair
+again. Later fork releases update in place through **Settings → App updates**.

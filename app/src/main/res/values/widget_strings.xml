@@ -13,7 +13,7 @@
     <string name="widget_sample_cost">$1.67 · 1.8K msgs</string>
     <string name="widget_week">7 DAYS</string>
     <string name="widget_open_app">OPEN APP</string>
-    <string name="widget_deck_label">Token Monitor · Pages</string>
+    <string name="widget_deck_label">Token Monitor (Remote) · Pages</string>
     <string name="widget_deck_description">Tap the card edges to move between overview, limits, breakdown, and activity. Every page uses the same full widget size and saved snapshot.</string>
     <string name="widget_deck_empty">Open Token Monitor to connect or refresh your Hub.</string>
     <string name="widget_deck_overview">OVERVIEW · 1/4</string>

@@ -40,6 +40,8 @@ internal data class WidgetSession(
     val expiresAt: Long = 0,
     val snapshot: HubSnapshot? = null,
     val note: String? = null,
+    /** Set only on the copy handed to a render, never on [WidgetRuntime.session]. */
+    val backgroundNote: String? = null,
 )
 
 /** Deliberately process-local: a killed process never advertises a surviving Live session. */

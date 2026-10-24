@@ -22,7 +22,7 @@ Tailscale may stay enabled at home. When both devices are on the same network it
 
 Settings has an optional **Home Wi-Fi URL** beside the Hub URL. Enter the desktop's private `10.x`, `172.16–31.x`, `192.168.x`, or `.local` address there and the phone switches on its own: it tries the address that answered last, and if that one is silent it tries the other. A Tailscale address is skipped while Tailscale is off, and the home address is skipped on mobile data unless a VPN such as a Tailscale subnet router carries it. Arriving home with Tailscale off, or leaving on mobile data, needs no manual change. While the stream is up, the header names the route that answered: `Tailscale`, `Home Wi-Fi`, or `Private network`. Settings → Hub status shows the same label.
 
-The main **Hub URL** must be a Tailscale address unless **Use Wi-Fi as the main Hub address** is enabled, which lets an isolated home network use a private address as the only Hub. The optional fallback is a separate choice. Tailscale remains preferred because it supplies an encrypted identity-aware path both at home and away.
+The main **Hub URL** must be a Tailscale address unless **Use Wi-Fi as the main Hub address** is enabled, which lets an isolated home network use a private address as the only Hub. In this fork the main field also accepts a public Hub behind an HTTPS reverse proxy, such as `https://hub.example.com` (port 443 by default; `http://` is refused for public hosts); the header then shows `Internet (HTTPS)`. See [Security and privacy](SECURITY.md#public-https-route-fork). The optional fallback is a separate choice. Tailscale remains preferred because it supplies an encrypted identity-aware path both at home and away.
 
 ### Updating a home address
 

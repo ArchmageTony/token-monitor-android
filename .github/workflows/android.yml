@@ -32,8 +32,13 @@ jobs:
       - name: Check documentation links
         run: node tools/check-docs.mjs
       - name: Check release metadata and tooling regressions
+        # Upstream checks its pinned release identity; a fork checks the identity derived for its own releases.
         run: |
-          node tools/check-release.mjs
+          if [ "$GITHUB_REPOSITORY" = "The-Minion-oOo/token-monitor-android" ]; then
+            node tools/check-release.mjs
+          else
+            node tools/fork-release.mjs check
+          fi
           node --test tools/tests/*.test.mjs
       - name: Test, lint, and build
         run: ./gradlew :app:testDebugUnitTest lint :app:assembleDebug --no-daemon --console=plain

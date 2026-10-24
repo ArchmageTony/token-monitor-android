@@ -200,7 +200,7 @@ internal fun TokenMonitorApp(viewModel: DashboardViewModel) {
                     onMoveHomeModule = viewModel::moveHomeModule,
                     onDisconnect = viewModel::disconnect,
                     onOpenServicePage = { url -> runCatching { uriHandler.openUri(url) } },
-                    onOpenReleasePage = { runCatching { uriHandler.openUri(androidReleasesUrl) } },
+                    onOpenReleasePage = { io.github.theminionooo.tokenmonitor.data.update.androidReleasesUrl?.let { runCatching { uriHandler.openUri(it) } } },
                     discovery = discovery,
                     onFindHomeHub = { withLocalNetworkAccess(true, viewModel::findHomeHub) },
                     onRepairHomeAddress = { address -> withLocalNetworkAccess(true) { viewModel.repairHomeAddress(address) } },
@@ -365,5 +365,3 @@ internal fun DashboardScaffold(
         }
     }
 }
-
-internal const val androidReleasesUrl = "https://github.com/The-Minion-oOo/token-monitor-android/releases"

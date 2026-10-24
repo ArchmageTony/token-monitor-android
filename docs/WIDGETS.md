@@ -94,7 +94,10 @@ the app.
 
 The label beside the toggle reads `LIVE` in the accent color while a session is
 connected, `CONNECTING` or `UPDATING` while one is in progress, and `SAVED · 18:17`
-otherwise. The narrow layouts drop the label and keep the toggle. Accessibility labels carry the full state and
+otherwise. In this fork, when the background refresh failed after the saved
+snapshot, the label reads `STALE · 18:17` and the accessibility label adds the
+failure time. Background refresh runs every 30 minutes by default while a widget
+is placed and can be changed under **Settings → Home-screen widget**. The narrow layouts drop the label and keep the toggle. Accessibility labels carry the full state and
 the saved timestamp. Figures come from the snapshot date, which may be older than
 today when the phone has been offline; Live does not invent intermediate readings,
 and the count rolls only when the total actually changes.

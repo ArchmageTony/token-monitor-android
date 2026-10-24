@@ -20,6 +20,9 @@ import javax.crypto.spec.GCMParameterSpec
 internal class SecureConnectionStore(context: Context) {
     private val preferences = context.getSharedPreferences("secure_connection", Context.MODE_PRIVATE)
 
+    /** Whether a pairing is saved, without touching the Keystore. */
+    fun exists(): Boolean = preferences.contains(ciphertextKey)
+
     fun read(): HubConnection? = runCatching {
         val encodedIv = preferences.getString(ivKey, null) ?: return null
         val encodedCiphertext = preferences.getString(ciphertextKey, null) ?: return null

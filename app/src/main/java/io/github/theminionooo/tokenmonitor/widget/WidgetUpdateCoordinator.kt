@@ -24,11 +24,15 @@ internal object WidgetUpdateCoordinator {
     }
 
     fun stopLiveIfUnused(context: Context) {
-        val manager = AppWidgetManager.getInstance(context)
-        val hasResponsive = manager.getAppWidgetIds(ComponentName(context, UsageWidgetProvider::class.java)).isNotEmpty()
-        val hasDeck = manager.getAppWidgetIds(ComponentName(context, SwipeWidgetProvider::class.java)).isNotEmpty()
-        if (!hasResponsive && !hasDeck) WidgetLiveService.stop(context)
+        if (!hasPlacedWidgets(context)) WidgetLiveService.stop(context)
     }
+
+    /** Whether any Token Monitor widget is on a home screen. A launcher that will not answer counts as none. */
+    fun hasPlacedWidgets(context: Context): Boolean = runCatching {
+        val manager = AppWidgetManager.getInstance(context)
+        manager.getAppWidgetIds(ComponentName(context, UsageWidgetProvider::class.java)).isNotEmpty() ||
+            manager.getAppWidgetIds(ComponentName(context, SwipeWidgetProvider::class.java)).isNotEmpty()
+    }.getOrDefault(false)
 }
 
 internal fun shouldRefreshSavedWidget(session: WidgetSession): Boolean = !session.enabled && !session.refreshing

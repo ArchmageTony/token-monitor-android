@@ -1,5 +1,6 @@
 package io.github.theminionooo.tokenmonitor
 
+import io.github.theminionooo.tokenmonitor.widget.BackgroundRefreshScheduler
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
             isAppearanceLightNavigationBars = false
         }
         setContent { TokenMonitorApp(viewModel) }
+        BackgroundRefreshScheduler.reconcileAsync(this)
     }
 
     override fun onResume() {

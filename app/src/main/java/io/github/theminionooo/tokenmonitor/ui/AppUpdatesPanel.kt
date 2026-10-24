@@ -111,5 +111,7 @@ internal fun AppUpdatesPanel(onOpenReleasePage: () -> Unit) {
     OutlinedButton(onClick = { scope.launch { check() } }, enabled = !checking && !downloading, modifier = Modifier.fillMaxWidth()) {
         Text("CHECK FOR UPDATES")
     }
-    OutlinedButton(onClick = onOpenReleasePage, modifier = Modifier.fillMaxWidth()) { Text("VIEW ANDROID RELEASES") }
+    if (io.github.theminionooo.tokenmonitor.data.update.androidReleasesUrl != null) {
+        OutlinedButton(onClick = onOpenReleasePage, modifier = Modifier.fillMaxWidth()) { Text("VIEW ANDROID RELEASES") }
+    }
 }

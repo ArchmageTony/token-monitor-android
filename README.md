@@ -31,6 +31,22 @@ numbers to your phone, with home-screen widgets for quick checks.
 
 The desktop stays the collector and the source of truth. The phone reads its Hub over your own private network and shows what it finds. That is the whole trick.
 
+> **Fork note: public HTTPS route.** This fork (app name **Token Monitor (Remote)**,
+> application ID `io.github.at.tokenmonitor`, installable beside the upstream app)
+> can also reach a Hub published on a server behind an HTTPS reverse proxy. Enter
+> the Hub's `https://` address, for example `https://hub.example.com`, plus the Hub
+> secret. Public addresses must use `https://` (port 443 unless you give one);
+> `http://` is refused for them, certificates are checked against Android's system
+> trust store, and Tailscale and home Wi-Fi routes work as before. See
+> [Security and privacy](docs/SECURITY.md#public-https-route-fork).
+>
+> Fork releases are signed with the fork's own key, use version codes with a
+> revision from 501 up (for example v0.77.0 r501 = 770501), and the in-app updater
+> checks only this fork's GitHub Releases. While a widget is placed, the widgets
+> also refresh in the background every 30 minutes by default (15, 30 or 60, or
+> off, under **Settings → Home-screen widget**), with no notification and no wake
+> lock. See [Fork releases](docs/RELEASING.md#fork-releases).
+
 ## The desktop dashboard, made mobile
 
 <table>
@@ -126,8 +142,8 @@ Session rows also show generation speed, cache-hit percentage and prompt-cache e
 
 - Read-only. The app cannot change desktop settings, usage data, or files.
 - Hub credentials live in an Android Keystore-backed store and are excluded from backups.
-- No ads, analytics, wake lock, scheduled background work or "please rate us" popup.
-- **Settings → App updates** checks published GitHub releases and verifies a downloaded signed APK before Android asks to install it; there is no background update check or silent install.
+- No ads, analytics, wake lock or "please rate us" popup. Upstream has no scheduled background work; this fork adds one optional periodic widget refresh (see the fork note above).
+- **Settings → App updates** checks published GitHub releases and verifies a downloaded signed APK before Android asks to install it; there is no background update check or silent install. In this fork it checks the fork's own releases and certificate, never upstream ones.
 - The visible dashboard streams immediately. Widget Live uses a lightweight 30-second stats refresh and stops after one hour.
 - Android 13 and newer asks for notification permission the first time you start a widget session, so the Stop control has somewhere to live. Android 17 also requests local-network permission when you choose home Wi-Fi access.
 
